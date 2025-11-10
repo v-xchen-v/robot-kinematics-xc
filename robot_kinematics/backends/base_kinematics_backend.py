@@ -20,7 +20,7 @@ class BaseKinematicsBackend(ABC):
     # --- Constuction --- #
     @classmethod
     @abstractmethod
-    def from_urdfpy(
+    def from_urdf(
         cls,
         urdf_path: str,
         base_link: str,

@@ -12,16 +12,16 @@ def T_to_pose(T: np.ndarray) -> Pose:
     quaternion = rotation.as_quat()  # returns in (x, y, z, w) format
     # Convert to (w, x, y, z) format
     quaternion = np.array([quaternion[3], quaternion[0], quaternion[1], quaternion[2]])
-    return Pose(position=position, orientation=quaternion)
+    return Pose(xyz=position, quat_wxyz=quaternion)
 
 def pose_to_T(pose: Pose) -> np.ndarray:
     """Convert a Pose object to a 4x4 transformation matrix."""
-    w, x, y, z = pose.orientation
+    w, x, y, z = pose.quat_wxyz
     rotation = R.from_quat([x, y, z, w], scalar_first=False)
     T_R = rotation.as_matrix()
     T = np.eye(4)
     T[:3, :3] = T_R
-    T[:3, 3] = pose.position
+    T[:3, 3] = pose.xyz
     return T
 
 @dataclass
@@ -32,21 +32,21 @@ class Pose:
         position: 3D position vector [x, y, z]
         orientation: Quaternion [w, x, y, z] in scalar-first format
     """
-    position: np.ndarray     # shape: (3,)
-    orientation: np.ndarray  # shape: (4,) quaternion (w, x, y, z) scalar-first
+    xyz: np.ndarray     # shape: (3,)
+    quat_wxyz: np.ndarray  # shape: (4,) quaternion (w, x, y, z) scalar-first
     
     def as_matrix(self) -> np.ndarray:
         """Convert pose to a 4x4 transformation matrix."""
-        w, x, y, z = self.orientation
+        w, x, y, z = self.quat_wxyz
         T_R = R.from_quat([x, y, z, w], scalar_first=False).as_matrix()
         T = np.eye(4)
         T[:3, :3] = T_R
-        T[:3, 3] = self.position
+        T[:3, 3] = self.xyz
         return T
     
     def as_flat_array(self) -> np.ndarray:
         """Convert pose to a flat array [x, y, z, qw, qx, qy, qz]."""
-        return np.concatenate((self.position, self.orientation))
+        return np.concatenate((self.xyz, self.quat_wxyz))
 
 
 @dataclass
@@ -75,8 +75,8 @@ class PoseDelta:
         Returns:
             PoseDelta representing the displacement
         """
-        position_delta = pose2.position - pose1.position
-        orientation_delta = pose2.orientation - pose1.orientation
+        position_delta = pose2.xyz - pose1.xyz
+        orientation_delta = pose2.quat_wxyz - pose1.quat_wxyz
         
         return cls(
             position_delta=position_delta,
@@ -92,10 +92,10 @@ class PoseDelta:
         Returns:
             New pose with delta applied
         """
-        new_position = pose.position + self.position_delta
-        new_orientation = pose.orientation + self.orientation_delta
+        new_position = pose.xyz + self.position_delta
+        new_orientation = pose.quat_wxyz + self.orientation_delta
         
         # Normalize the quaternion to ensure it's valid
         new_orientation = new_orientation / np.linalg.norm(new_orientation)
         
-        return Pose(position=new_position, orientation=new_orientation)
+        return Pose(xyz=new_position, quat_wxyz=new_orientation)

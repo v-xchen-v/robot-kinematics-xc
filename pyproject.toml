@@ -39,7 +39,7 @@ Issues = "https://github.com/v-xchen-v/vla-kinematics-xc/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["robot_kinematcis*"]
+include = ["robot_kinematics*"]
 
 [tool.black]
 line-length = 88

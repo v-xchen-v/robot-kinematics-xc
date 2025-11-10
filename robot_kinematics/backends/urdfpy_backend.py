@@ -47,16 +47,17 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
     ) -> "URDFPyKinematicsBackend":
         robot = URDF.load(urdf_path)
 
-        # If joint_names not provided, get them from the base class method
+        # Create a temporary instance to use base class methods
+        temp_instance = cls.__new__(cls)
+        temp_instance.urdf_path = urdf_path
+        temp_instance.base_link = base_link
+        temp_instance.ee_link = ee_link
+        temp_instance._urdf_inspector = None
+        
+        # Get joint_names and link_names from the base class methods
         if joint_names is None:
-            # Create a temporary instance to use the base class method
-            temp_instance = cls.__new__(cls)
-            temp_instance.urdf_path = urdf_path
-            temp_instance.base_link = base_link
-            temp_instance.ee_link = ee_link
-            temp_instance._urdf_inspector = None
             joint_names = temp_instance.list_joints(movable_only=True)
-            link_names = temp_instance.list_links()
+        link_names = temp_instance.list_links()
             
         metadata = {
             "urdf_path": urdf_path,
@@ -94,11 +95,11 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
 
         q_dict = self._q_to_dict(q)
         # link_fk returns dict: Link -> 4x4 transform; can also index by link name
-        T_map = self.robot.link_fk(cfg=q_dict, base_link=self.base_link)
+        T_map = self.robot.link_fk(cfg=q_dict, use_names=True)
         # In some urdfpy versions T_map keys are Link objects; we can search by name
         T_target = None
         for link, T in T_map.items():
-            if getattr(link, "name", None) == link_name:
+            if link == link_name:
                 T_target = T
                 break
 
@@ -109,10 +110,10 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
     
     def fk_all_frames(self, q: np.ndarray) -> Dict[str, Pose]:
         q_dict = self._q_to_dict(q)
-        T_map = self.robot.link_fk(cfg=q_dict, base_link=self.base_link)
+        T_map = self.robot.link_fk(cfg=q_dict, use_names=True)
         frames: Dict[str, Pose] = {}
         for link, T in T_map.items():
-            name = getattr(link, "name", None)
+            name = link
             if name is None:
                 continue
             frames[name] = T_to_pose(T)
@@ -126,14 +127,27 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         q: np.ndarray,
         link_name: Optional[str] = None,
     ) -> np.ndarray:
-        if link_name is None:
-            link_name = self.ee_link
-
-        q_dict = self._q_to_dict(q)
-        # urdfpy.jacobian returns: (6, n_joints) Jacobian at given link
-        J = self.robot.jacobian(
-            cfg=q_dict,
-            link=link_name,
-            base_link=self.base_link,
+        raise NotImplementedError(
+            "URDFPy backend does not support Jacobian computation. "
+            "Please use a different backend (e.g., Pinocchio) for Jacobian capabilities."
         )
-        return np.asarray(J)  # ensure np.ndarray
+        
+    # -------------------------------------------------------------------------
+    # IK (Not Supported)
+    # -------------------------------------------------------------------------
+    def ik(
+        self,
+        target_pose: Pose,
+        initial_joint_positions: Optional[np.ndarray] = None,
+        **kwargs: Any
+    ) -> np.ndarray:
+        """
+        Inverse kinematics is not supported by urdfpy backend.
+        
+        Raises:
+            NotImplementedError: Always, as urdfpy does not provide IK capabilities.
+        """
+        raise NotImplementedError(
+            "URDFPy backend does not support inverse kinematics (IK). "
+            "Please use a different backend (e.g., Pinocchio or RelaxIK) for IK capabilities."
+        )

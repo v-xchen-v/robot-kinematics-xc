@@ -49,7 +49,7 @@ def main():
     ee_pose = backend.fk(q)
     print(f"\nEnd-effector pose at zero configuration:")
     print(f"  Position: {ee_pose.xyz}")
-    print(f"  Quaternion (xyzw): {ee_pose.quat_xyzw}")
+    print(f"  Quaternion (xyzw): {ee_pose.quat_wxyz}")
     
     # Example 3: FK for a specific link
     if len(links) > 2:
@@ -62,17 +62,7 @@ def main():
     all_poses = backend.fk_all_frames(q)
     print(f"\nComputed FK for {len(all_poses)} frames")
     
-    # Example 5: Compute Jacobian
-    J = backend.jacobian(q)
-    print(f"\nJacobian shape: {J.shape}")
-    print(f"Jacobian at zero configuration:\n{J}")
-    
-    # Example 6: Jacobian for a specific link
-    if len(links) > 2:
-        J_mid = backend.jacobian(q, link_name=mid_link)
-        print(f"\nJacobian for '{mid_link}' shape: {J_mid.shape}")
-    
-    # Example 7: Create backend with explicit joint names
+    # Example 5: Create backend with explicit joint names
     # (useful when you want to control joint order or use a subset)
     specific_joints = joints[:3] if len(joints) >= 3 else joints
     backend2 = URDFPyKinematicsBackend.from_urdf(
