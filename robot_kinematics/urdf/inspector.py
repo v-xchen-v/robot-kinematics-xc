@@ -5,7 +5,7 @@ except ImportError:
     PROJECT_DIR = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
     import sys
     sys.path.insert(0, PROJECT_DIR)
-    from robot_kinematcis.compat import urdfpy_compat
+    from robot_kinematics.compat import urdfpy_compat
 
 from urdfpy import URDF
 from typing import List, Tuple, Optional

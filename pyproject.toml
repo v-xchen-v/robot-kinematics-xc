@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robot-kinematics"
+version = "0.1.0"
+description = "A reusable robotics kinematics toolkit supporting FK, IK, Jacobians, and visualization across different robots and backends (URDFPy, Pinocchio, RelaxIK)."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Xi Chen", email = "407081305@qq.com" },
+]
+keywords = ["robotics", "kinematics", "URDF", "FK", "IK", "jacobian", "pinocchio", "urdfpy"]
+
+# Required runtime dependencies
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.8",
+    "urdfpy>=0.0.22",
+    "pyyaml",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/v-xchen-v/vla-kinematics-xc"
+Repository = "https://github.com/v-xchen-v/vla-kinematics-xc.git"
+Issues = "https://github.com/v-xchen-v/vla-kinematics-xc/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["robot_kinematcis*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

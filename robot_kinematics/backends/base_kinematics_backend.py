@@ -15,6 +15,7 @@ class BaseKinematicsBackend(ABC):
     def __init__(self, name: str, metadata: Optional[Dict[str, Any]] = None):
         self.name = name
         self.metadata = metadata if metadata is not None else {}
+        self._urdf_inspector = None  # Lazy-initialized cache
         
     # --- Constuction --- #
     @classmethod
@@ -23,7 +24,7 @@ class BaseKinematicsBackend(ABC):
         cls,
         urdf_path: str,
         base_link: str,
-        end_effector_link: str,
+        ee_link: str,
         joint_names: Optional[List[str]] = None,
         **kwargs: Any
     ) -> "BaseKinematicsBackend":
@@ -119,17 +120,56 @@ class BaseKinematicsBackend(ABC):
         ...
         
     # --- Additional Methods --- #
-    @abstractmethod
-    def get_frame_names(self) -> List[str]:
+    def _get_urdf_inspector(self):
         """
-        Get the list of frame/link names in the robot model.
+        Lazy-initialize and cache the URDF inspector.
+        
+        Returns:
+            SubchainURDFInspector or None
+        """
+        if self._urdf_inspector is None:
+            if hasattr(self, 'urdf_path') and hasattr(self, 'base_link') and hasattr(self, 'ee_link'):
+                from ..urdf.inspector import SubchainURDFInspector
+                self._urdf_inspector = SubchainURDFInspector(self.urdf_path, self.base_link, self.ee_link)
+        return self._urdf_inspector
+    
+    def list_links(self) -> List[str]:
+        """
+        Get the list of frame/link names in the robot model between base_link and end_effector_link.
+        
+        Default implementation uses SubchainURDFInspector if urdf_path, base_link, and ee_link
+        attributes are available. Otherwise returns an empty list. Subclasses can override this
+        method to provide backend-specific implementations.
 
         Returns:
             List[str]
                 List of frame/link names.
         """
-        ...
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.list_links()
+        return []
+    
+    def list_joints(self, movable_only: bool = True) -> List[str]:
+        """
+        Get the list of joint names in the robot model between base_link and end_effector_link.
         
+        Default implementation uses SubchainURDFInspector if urdf_path, base_link, and ee_link
+        attributes are available. Otherwise returns an empty list. Subclasses can override this
+        method to provide backend-specific implementations.
+
+        Args:
+            movable_only: bool, optional
+                If True, return only movable joints. Default is True.   
+        Returns:
+            List[str]
+                List of joint names.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.get_joint_names(movable_only=movable_only)
+        return []
+    
     @abstractmethod
     def fk_all_frames(
         self,
