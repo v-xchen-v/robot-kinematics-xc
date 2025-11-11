@@ -54,7 +54,7 @@ def main():
     # Example 3: FK for a specific link
     if len(links) > 2:
         mid_link = links[len(links) // 2]
-        mid_pose = backend.fk(q, link_name=mid_link)
+        mid_pose = backend.fk(joint_positions=q, target_link=mid_link)
         print(f"\nPose of link '{mid_link}':")
         print(f"  Position: {mid_pose.xyz}")
     

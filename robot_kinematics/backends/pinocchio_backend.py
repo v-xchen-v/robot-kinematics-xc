@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 from scipy.spatial.transform import Rotation
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
+from ..urdf.inspector import SubchainURDFInspector
 
 try:
     import pinocchio as pin
@@ -48,20 +49,6 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
                 "conda install pinocchio -c conda-forge"
             )
         
-        # Initialize metadata early
-        if metadata is None:
-            metadata = {}
-        metadata.update({
-            "urdf_path": urdf_path,
-            "base_link": base_link,
-            "ee_link": ee_link,
-            "package_dirs": package_dirs,
-            "joints_to_lock": joints_to_lock,
-        })
-        metadata.update(kwargs)
-        
-        super().__init__(name=name, metadata=metadata)
-        
         # Load the URDF model using RobotWrapper
         if package_dirs is not None:
             robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
@@ -80,6 +67,9 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         self.urdf_path = urdf_path
         self.base_link = base_link
         self.ee_link = ee_link
+        
+        # Initialize URDF inspector for shared methods (provides list_links, list_joints)
+        self._urdf_inspector = SubchainURDFInspector(urdf_path, base_link, ee_link)
         
         # Get joint_names from the base class methods if not provided
         if joint_names is None:
@@ -275,41 +265,6 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         
         return frames
 
-    # -------------------------------------------------------------------------
-    # Jacobian
-    # -------------------------------------------------------------------------
-    def jacobian(
-        self,
-        q: np.ndarray,
-        link_name: Optional[str] = None,
-    ) -> np.ndarray:
-        # if link_name is None:
-        #     link_name = self.ee_link
-        
-        # # Get the frame ID
-        # if not self.model.existFrame(link_name):
-        #     raise ValueError(f"Link '{link_name}' not found in the model frames.")
-        # frame_id = self.model.getFrameId(link_name)
-        
-        # # Ensure q has the correct shape
-        # q_full = self._ensure_q_shape(q)
-        
-        # # Compute forward kinematics (required before Jacobian computation)
-        # pin.framesForwardKinematics(self.model, self.data, q_full)
-        
-        # # Compute the frame Jacobian in the local frame
-        # J = pin.computeFrameJacobian(
-        #     self.model, 
-        #     self.data, 
-        #     q_full, 
-        #     frame_id, 
-        #     pin.ReferenceFrame.LOCAL_WORLD_ALIGNED
-        # )
-        
-        # # Return only the columns corresponding to our joint_names
-        # # Assuming the first n_dof columns correspond to our joints
-        # return J[:, :self.n_dof]
-        raise NotImplementedError("Jacobian computation is not yet implemented.")
         
     # -------------------------------------------------------------------------
     # IK

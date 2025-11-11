@@ -6,6 +6,7 @@ from urdfpy import URDF
 from typing import List, Optional, Dict, Any
 import numpy as np
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
+from ..urdf.inspector import SubchainURDFInspector
 
 class URDFPyKinematicsBackend(BaseKinematicsBackend):
     """
@@ -24,20 +25,9 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         ee_link: str,
         joint_names: Optional[List[str]] = None,
         name: str = "urdfpy",
-        metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any
     ):
-        # Initialize metadata early
-        if metadata is None:
-            metadata = {}
-        metadata.update({
-            "urdf_path": urdf_path,
-            "base_link": base_link,
-            "ee_link": ee_link,
-        })
-        metadata.update(kwargs)
-        
-        super().__init__(name=name, metadata=metadata)
+        # Don't call super().__init__() yet - we need to set up attributes first
         
         # Load robot from URDF
         robot = URDF.load(urdf_path)
@@ -46,6 +36,11 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         self.urdf_path = urdf_path
         self.base_link = base_link
         self.ee_link = ee_link
+        
+        self.name = name
+        
+        # Initialize URDF inspector for shared methods
+        self._urdf_inspector = SubchainURDFInspector(urdf_path, base_link, ee_link)
         
         # Get joint_names and link_names from the base class methods
         if joint_names is None:
@@ -68,27 +63,27 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         # -------------------------------------------------------------------------
     # FK
     # -------------------------------------------------------------------------
-    def fk(self, q: np.ndarray, link_name: Optional[str] = None) -> Pose:
-        if link_name is None:
-            link_name = self.ee_link
+    def fk(self, joint_positions: np.ndarray, target_link: Optional[str] = None) -> Pose:
+        if target_link is None:
+            target_link = self.ee_link
 
-        q_dict = self._q_to_dict(q)
+        q_dict = self._q_to_dict(joint_positions)
         # link_fk returns dict: Link -> 4x4 transform; can also index by link name
         T_map = self.robot.link_fk(cfg=q_dict, use_names=True)
         # In some urdfpy versions T_map keys are Link objects; we can search by name
         T_target = None
         for link, T in T_map.items():
-            if link == link_name:
+            if link == target_link:
                 T_target = T
                 break
 
         if T_target is None:
-            raise ValueError(f"Link {link_name} not found in FK result.")
+            raise ValueError(f"Link {target_link} not found in FK result.")
 
         return T_to_pose(T_target)
     
-    def fk_all_frames(self, q: np.ndarray) -> Dict[str, Pose]:
-        q_dict = self._q_to_dict(q)
+    def fk_all_frames(self, joint_positions: np.ndarray) -> Dict[str, Pose]:
+        q_dict = self._q_to_dict(joint_positions)
         T_map = self.robot.link_fk(cfg=q_dict, use_names=True)
         frames: Dict[str, Pose] = {}
         for link, T in T_map.items():
@@ -103,8 +98,8 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
     # -------------------------------------------------------------------------
     def jacobian(
         self,
-        q: np.ndarray,
-        link_name: Optional[str] = None,
+        joint_positions: np.ndarray,
+        target_link: Optional[str] = None,
     ) -> np.ndarray:
         raise NotImplementedError(
             "URDFPy backend does not support Jacobian computation. "
@@ -116,7 +111,7 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
     # -------------------------------------------------------------------------
     def ik(
         self,
-        target_pose: Pose,
+        target: Pose,
         initial_joint_positions: Optional[np.ndarray] = None,
         **kwargs: Any
     ) -> np.ndarray:
