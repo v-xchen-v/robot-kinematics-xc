@@ -94,18 +94,18 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
             frames[name] = T_to_pose(T)
         return frames
 
-    # -------------------------------------------------------------------------
-    # Jacobian
-    # -------------------------------------------------------------------------
-    def jacobian(
-        self,
-        joint_positions: np.ndarray,
-        target_link: Optional[str] = None,
-    ) -> np.ndarray:
-        raise NotImplementedError(
-            "URDFPy backend does not support Jacobian computation. "
-            "Please use a different backend (e.g., Pinocchio) for Jacobian capabilities."
-        )
+    # # -------------------------------------------------------------------------
+    # # Jacobian
+    # # -------------------------------------------------------------------------
+    # def jacobian(
+    #     self,
+    #     joint_positions: np.ndarray,
+    #     target_link: Optional[str] = None,
+    # ) -> np.ndarray:
+    #     raise NotImplementedError(
+    #         "URDFPy backend does not support Jacobian computation. "
+    #         "Please use a different backend (e.g., Pinocchio) for Jacobian capabilities."
+    #     )
         
     # -------------------------------------------------------------------------
     # IK (Not Supported)

@@ -14,7 +14,11 @@ def main():
         ee_link="gripper_r_center_link",
         backend="urdfpy",
     )
-    
+    # ---------- Joint order: robot.joint_names ----------
+    print(f"Joint order (URDF) from {robot_kinematics.base_link} -> {robot_kinematics.ee_link}:")
+    for name in robot_kinematics.joint_names:
+        print(f"  - {name}")
+
     # ---------- FK with full joint array ----------
     q_home = np.zeros(robot_kinematics.n_dofs)
     # print the dict joint names and their values

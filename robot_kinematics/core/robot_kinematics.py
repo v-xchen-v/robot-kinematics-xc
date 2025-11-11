@@ -83,13 +83,14 @@ class RobotKinematics:
     # -------------------------- IK -------------------------- #
     def ik(
         self,
-        target: Pose,
+        target_pose: Pose,
         seed_q: Optional[Union[np.ndarray, JointCfg]] = None,
         options: Optional[IKOptions] = None,
     ) -> IKResult:
         """
         Solve IK to reach target Pose (in base_link frame).
 
+        seed_q: initial joint position guess for IK solver.
         seed_q can be:
             - np.ndarray in backend joint order
             - dict {joint_name: value}
@@ -101,7 +102,7 @@ class RobotKinematics:
             seed_q = self.q_dict_to_array(seed_q)
 
         result = self._backend.ik(
-            target=target,
+            target_pose=target_pose,
             seed_q=seed_q,
             options=options,
             base=self.base_link,

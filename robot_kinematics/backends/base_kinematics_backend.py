@@ -76,6 +76,8 @@ class BaseKinematicsBackend(ABC):
         self.joint_names = []
         self.link_names = []
         self.n_dofs = -1
+        self.base_link = ""
+        self.ee_link = ""
         
         # Initialize the inspector as None - subclasses should set this
         self._urdf_inspector = None
@@ -109,7 +111,7 @@ class BaseKinematicsBackend(ABC):
     def ik(
         self,
         target_pose: Pose,
-        initial_joint_positions: Optional[np.ndarray] = None,
+        seed_q: Optional[np.ndarray] = None,
         **kwargs: Any
     ) -> IKResult:
         """
@@ -118,7 +120,7 @@ class BaseKinematicsBackend(ABC):
         Args:
             target_pose: Pose
                 Desired target pose for the end-effector.
-            initial_joint_positions: Optional[np.ndarray], optional
+            seed_q: Optional[np.ndarray], optional
                 Initial guess for joint positions. If None, use zeros.
             **kwargs: Any
                 Additional backend-specific arguments.
@@ -202,3 +204,42 @@ class BaseKinematicsBackend(ABC):
         if inspector is not None:
             return inspector.get_joint_names(movable_only=movable_only)
         return []
+
+    def list_excluded_joints(self) -> List[str]:
+        """
+        Get the list of joints that are present in the URDF but excluded
+        from the kinematic chain between base_link and end_effector_link.
+
+        This method uses the SubchainURDFInspector to identify joints
+        that are not part of the subchain. Subclasses can override this
+        method to provide backend-specific implementations if needed.
+
+        Returns:
+            List[str]: List of excluded joint names.
+                       Returns empty list if inspector is not initialized.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.list_excluded_joints(
+                base_link=self.base_link,
+                ee_link=self.ee_link,
+            )
+        return []
+    
+    def list_joint_limits(self, movable_only: bool = True) -> Dict[str, Dict[str, float]]:
+        """
+        Get the joint limits for joints in the robot model between base_link and end_effector_link.
+        
+        This method uses the SubchainURDFInspector to retrieve joint limits from the URDF.
+        Subclasses can override this method to provide backend-specific implementations if needed.
+
+        Args:
+            movable_only: bool, optional
+                If True, return limits only for movable joints (revolute, prismatic, continuous).
+                If False, return limits for all joints including fixed joints.
+                Default is True.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.list_joint_limits(movable_only=movable_only)
+        return {}

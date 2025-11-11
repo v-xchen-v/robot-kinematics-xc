@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 from scipy.spatial.transform import Rotation
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
-from ..urdf.inspector import SubchainURDFInspector
+from ..urdf.inspector import SubchainURDFInspector, FullURDFInspector
 from ..core.types import IKResult
 import os
 
@@ -41,6 +41,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         joint_names: Optional[List[str]] = None,
         package_dirs: Optional[str] = None,
         joints_to_lock: Optional[List[str]] = None,
+        auto_lock_excluded_joints: bool = True,
         name: str = "pinocchio",
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any
@@ -51,6 +52,16 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
                 "conda install pinocchio -c conda-forge"
             )
         
+        # Automatically determine joints to lock if not provided
+        if joints_to_lock is None and auto_lock_excluded_joints:
+            full_inspector = FullURDFInspector(urdf_path)
+            joints_to_lock = full_inspector.list_excluded_joints(
+                base_link=base_link, 
+                ee_link=ee_link, 
+                movable_only=True
+            )
+            print(f"Auto-locking {len(joints_to_lock)} joints not in kinematic chain: {joints_to_lock}")
+        
         # Load the URDF model using RobotWrapper
         if package_dirs is not None:
             robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
@@ -60,7 +71,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
             robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
         
         # Build reduced robot if joints_to_lock is provided
-        if joints_to_lock is not None:
+        if joints_to_lock is not None and len(joints_to_lock) > 0:
             reference_config = np.zeros(robot.model.nq)
             robot = robot.buildReducedRobot(
                 list_of_joints_to_lock=joints_to_lock,

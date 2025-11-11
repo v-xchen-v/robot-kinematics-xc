@@ -23,7 +23,10 @@ def main():
     base_link = "base_link"  # Adjust based on your robot
     ee_link = "gripper_r_center_link"  # Adjust based on your robot
     
-    # Joints to lock (optional) - lock the right arm and leg for simpler IK
+    # Joints to lock will be automatically determined using list_excluded_joints()
+    # This will lock all joints that are not part of the kinematic chain from base_link to ee_link
+    # You can still manually specify joints_to_lock if needed, or set auto_lock_excluded_joints=False
+    
     joints_to_lock = [
         # 锁定身体关节
         "idx01_body_joint1",
@@ -56,7 +59,7 @@ def main():
             base_link=base_link,
             ee_link=ee_link,
             package_dirs=package_dirs,
-            joints_to_lock=joints_to_lock,
+            auto_lock_excluded_joints=True,  # Automatically lock joints not in kinematic chain
         )
         print(f"   ✓ Backend initialized successfully")
         print(f"   - Number of DOF: {backend.n_dofs}")

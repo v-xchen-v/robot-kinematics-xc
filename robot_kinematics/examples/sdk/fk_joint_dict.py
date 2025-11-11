@@ -41,6 +41,24 @@ def main():
     print("  position   :", pose_home_pin.xyz)
     print("  orientation:", pose_home_pin.quat_wxyz)
     
+    
+    # print joint limit for reference
+    print("\nJoint limits:")
+    joint_limits = robot_kinematics._backend.list_joint_limits()
+    for name, joint_type, lower, upper in joint_limits:
+        print(f"  {name:<20} [{lower:.2f}, {upper:.2f}]")
+    
+    # Only specify some joints, others as 0
+    q_cfg = {
+        "idx01_body_joint1": 0.3,
+        "idx02_body_joint2": 0.5,
+    }
+    pose_pin = robot_kinematics_with_pin.fk(q_cfg)
+
+    print("\nFK with Pinocchio backend (partial joint configuration) - pose:")
+    print("  position   :", pose_pin.xyz)
+    print("  orientation:", pose_pin.quat_wxyz)
+
 main()
     
     
