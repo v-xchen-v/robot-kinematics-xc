@@ -115,6 +115,8 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         self.link_names = link_names
         self.ee_frame_id = ee_frame_id
         self.n_dofs = len(joint_names)
+        if self.active_joint_names is None or len(self.active_joint_names) == 0:
+            self.active_joint_names = joint_names
         self.n_active_dofs = len(self.active_joint_names)
         
         self.active_joint_indices = []

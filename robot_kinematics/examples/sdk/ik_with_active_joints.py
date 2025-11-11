@@ -54,14 +54,6 @@ def main():
 
     target_pose = robot_kin_urdfpy.fk(q_active_default)
 
-    # target_pose = Pose(
-    #     xyz=np.array([0.4, 0.1, 0.2]),
-    #     quat_wxyz=np.array([1.0, 0.0, 0.0, 0.0]),
-    # )
-
-    # q_home = np.zeros(kin_pin.n_dofs)
-    # q_full_default = kin_pin.expand_q_full(q_active_default, q_home, use_joint_names=True)
-    # q_seed = q_full_default
     q_seed = q_active_default.copy()
     
 
@@ -82,17 +74,47 @@ def main():
     pose_fk = robot_kin_urdfpy.fk(q_dict)
     # delta of target and fk pose
     pos_err = np.linalg.norm(pose_fk.xyz - target_pose.xyz)
-    ori_err = np.linalg.norm(pose_fk.quat_wxyz - target_pose.quat_wxyz)
-    print(f"FK of IK result - position error: {pos_err:.6f}, orientation error: {ori_err:.6f}")
+    ori_err = np.abs(np.arccos(np.clip(np.dot(pose_fk.quat_wxyz, target_pose.quat_wxyz), -1.0, 1.0))) * 2.0
+    # print position error in mm
+    print(f"FK of IK result - position error: {pos_err*1000:.6f}")
+    # print orientation error in degrees
+    print(f"FK of IK result - orientation error: {np.degrees(ori_err):.6f}")
 
-    # update the full q with inactive qseed + q_arr in ik_result do fk and visualize to check
-    # q_full = q_seed.copy()
-    # for i, name in enumerate(kin_pin.active_joint_names):
-    #     joint_index = kin_pin._name_to_index[name]
-    #     q_full[joint_index] = q_arr[i]
-    # pose_fk = robot_kin_urdfpy.fk(q_full)
-    # print("\nFK of IK result - pose:")
-    # print("  position   :", pose_fk.xyz)
-    # print("  orientation:", pose_fk.quat_wxyz)
+
+def main_without_active_joints_cfg():
+    kin_pin = RobotKinematics(
+        urdf_path="robot_kinematics/data/g1/G1_120s/urdf/G1_120s.urdf",
+        base_link="base_link",
+        ee_link="gripper_r_center_link",
+        backend="pinocchio",
+    )
+
+    robot_kin_urdfpy = RobotKinematics(
+        urdf_path="robot_kinematics/data/g1/G1_120s/urdf/G1_120s.urdf",
+        base_link="base_link",
+        ee_link="gripper_r_center_link",
+        backend="urdfpy",
+    )
+
+    # generate a reachable pose
+    q_active_default = {
+        'idx61_arm_r_joint1': 0.4,
+        'idx62_arm_r_joint2': -1.4,
+        'idx63_arm_r_joint3': -0.2,
+        'idx64_arm_r_joint4': 1.2,
+        'idx65_arm_r_joint5': -2.9,
+        'idx66_arm_r_joint6': 0.0,
+        'idx67_arm_r_joint7': 0.0,
+    }
+    target_pose = robot_kin_urdfpy.fk(q_active_default)
+
+    q_seed = np.zeros(kin_pin.n_dofs)
+
+    ik_result = kin_pin.ik(target_pose, seed_q=q_seed)
+    q_arr = ik_result.q
+    q_dict = kin_pin.q_array_to_dict(q_arr)
+    print("IK result without active joints config:")
+    print(q_dict)
 
 main()
+main_without_active_joints_cfg()

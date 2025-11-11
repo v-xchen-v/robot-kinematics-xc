@@ -199,6 +199,8 @@ class FullURDFInspector:
                     active_chain_joints.append(j)
                     if verbose:
                         print(f"  {j:<20} (inactive)")
+        else:
+            active_chain_joints = list(chain_joints)
                         
         # Find excluded joints
         excluded_joints = [j.name for j in all_joints if j.name not in active_chain_joints]
