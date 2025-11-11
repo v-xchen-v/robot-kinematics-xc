@@ -59,7 +59,7 @@ def main():
             joints_to_lock=joints_to_lock,
         )
         print(f"   ✓ Backend initialized successfully")
-        print(f"   - Number of DOF: {backend.n_dof}")
+        print(f"   - Number of DOF: {backend.n_dofs}")
         print(f"   - Joint names: {backend.joint_names}")
     except Exception as e:
         print(f"   ✗ Failed to initialize backend: {e}")
@@ -68,7 +68,7 @@ def main():
     
     # Step 2: Define initial joint configuration
     print("\n2. Setting up initial joint configuration...")
-    initial_q = np.zeros(backend.n_dof)
+    initial_q = np.zeros(backend.n_dofs)
     # You can set specific initial angles here if needed
     # initial_q[0] = 0.1  # Example: first joint at 0.1 rad
     print(f"   - Initial joint positions: {initial_q}")

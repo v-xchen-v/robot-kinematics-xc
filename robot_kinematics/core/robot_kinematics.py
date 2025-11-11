@@ -51,7 +51,7 @@ class RobotKinematics:
 
     def q_dict_to_array(self, q_dict: dict) -> np.ndarray:
         """Convert {joint_name: value} (subset or full) → joint vector."""
-        q = np.array(self._backend.default_q, dtype=float, copy=True)
+        q = np.zeros(self.n_dofs, dtype=float)
         for name, value in q_dict.items():
             if name not in self._name_to_index:
                 raise KeyError(f"Unknown joint name: {name}")
@@ -68,7 +68,7 @@ class RobotKinematics:
         return self.q_dict_to_array(q_or_cfg)
     
         # -------------------------- FK -------------------------- #
-    def fk(self, q: Union[np.ndarray, JointCfg], link: Optional[str] = None) -> Pose:
+    def fk(self, joint_positions: Union[np.ndarray, JointCfg], target_link: Optional[str] = None) -> Pose:
         """
         Compute FK in base_link frame.
 
@@ -76,9 +76,9 @@ class RobotKinematics:
             q:  np.ndarray (dof,) OR dict {joint_name: value}
             link: target link; default = self.ee_link
         """
-        q_vec = self._q_from_array_or_cfg(q)
-        link = link or self.ee_link
-        return self._backend.fk(q=q_vec, base=self.base_link, link=link)
+        q_vec = self._q_from_array_or_cfg(joint_positions)
+        target_link = target_link or self.ee_link
+        return self._backend.fk(joint_positions=q_vec, target_link=target_link)
 
     # -------------------------- IK -------------------------- #
     def ik(

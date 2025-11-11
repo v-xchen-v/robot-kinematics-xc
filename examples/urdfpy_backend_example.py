@@ -27,7 +27,7 @@ def main():
     )
     
     print(f"Backend created: {backend.name}")
-    print(f"Number of DOFs: {backend.n_dof}")
+    print(f"Number of DOFs: {backend.n_dofs}")
     
     # List all joints in the kinematic chain
     joints = backend.list_joints(movable_only=True)
@@ -43,7 +43,7 @@ def main():
     
     # Example 2: Forward Kinematics
     # Create a sample joint configuration (zeros for simplicity)
-    q = np.zeros(backend.n_dof)
+    q = np.zeros(backend.n_dofs)
     
     # Compute FK for the end-effector
     ee_pose = backend.fk(q)
@@ -72,11 +72,11 @@ def main():
         joint_names=specific_joints  # Explicit subset
     )
     print(f"\n\nBackend with specific joints:")
-    print(f"  DOFs: {backend2.n_dof}")
+    print(f"  DOFs: {backend2.n_dofs}")
     print(f"  Joints: {backend2.joint_names}")
     
     # Use with non-zero configuration
-    q2 = np.random.uniform(-0.5, 0.5, backend2.n_dof)
+    q2 = np.random.uniform(-0.5, 0.5, backend2.n_dofs)
     pose2 = backend2.fk(q2)
     print(f"\nEnd-effector pose with random configuration:")
     print(f"  Position: {pose2.xyz}")

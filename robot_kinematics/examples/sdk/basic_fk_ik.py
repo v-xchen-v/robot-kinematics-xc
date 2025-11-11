@@ -5,7 +5,7 @@ from robot_kinematics.core.types import Pose, IKOptions
 def main():
     urdf_path = "../robots/g1/A2D_120s/urdf/A2D.urdf"
     
-    # Change backend_name here: "dummy", "urdfpy", "pinocchio", etc
+# Change backend_name here: "dummy", "urdfpy", "pinocchio", etc
     robot = RobotKinematics(
         urdf_path=urdf_path,
         base_link="base_link",

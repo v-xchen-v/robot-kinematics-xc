@@ -52,13 +52,13 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         self.robot = robot
         self.joint_names = joint_names
         self.link_names = link_names
-        self.n_dof = len(joint_names)
+        self.n_dofs = len(joint_names)
         
     # -------------------------------------------------------------------------
     # Helpers for URDFPy
     # -------------------------------------------------------------------------
     def _q_to_dict(self, q: np.ndarray) -> Dict[str, float]:
-        assert q.shape == (self.n_dof,), f"Expected q shape {(self.n_dof,)}, got {q.shape}"
+        assert q.shape == (self.n_dofs,), f"Expected q shape {(self.n_dofs,)}, got {q.shape}"
         return {name: float(val) for name, val in zip(self.joint_names, q)}
     
         # -------------------------------------------------------------------------
@@ -142,5 +142,5 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         Returns:
             Dictionary {joint_name: joint_value}
         """
-        assert q.shape == (self.n_dof,), f"Expected q shape {(self.n_dof,)}, got {q.shape}"
+        assert q.shape == (self.n_dofs,), f"Expected q shape {(self.n_dofs,)}, got {q.shape}"
         return {name: float(val) for name, val in zip(self.joint_names, q)}

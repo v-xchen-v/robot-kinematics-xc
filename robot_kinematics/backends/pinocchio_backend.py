@@ -6,6 +6,7 @@ from scipy.spatial.transform import Rotation
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
 from ..urdf.inspector import SubchainURDFInspector
 from ..core.types import IKResult
+import os
 
 try:
     import pinocchio as pin
@@ -54,7 +55,9 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         if package_dirs is not None:
             robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
         else:
-            robot = pin.RobotWrapper.BuildFromURDF(urdf_path)
+            # automatically find the package dir as the file directory
+            package_dirs = [os.path.dirname(urdf_path)]
+            robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
         
         # Build reduced robot if joints_to_lock is provided
         if joints_to_lock is not None:
@@ -89,7 +92,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         self.joint_names = joint_names
         self.link_names = link_names
         self.ee_frame_id = ee_frame_id
-        self.n_dof = len(joint_names)
+        self.n_dofs = len(joint_names)
         
         # Initialize CasADi-based IK solver (lazy initialization)
         self._ik_solver_initialized = False
@@ -102,18 +105,18 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
     # -------------------------------------------------------------------------
     def _ensure_q_shape(self, q: np.ndarray) -> np.ndarray:
         """Ensure joint configuration has the correct shape for Pinocchio."""
-        if q.shape == (self.n_dof,):
+        if q.shape == (self.n_dofs,):
             # Extend to full model configuration if needed
             q_full = pin.neutral(self.model)
             # Map the provided joints to the model's joint configuration
             # Assuming the joints are in the same order as the model's movable joints
-            q_full[:self.n_dof] = q
+            q_full[:self.n_dofs] = q
             return q_full
         elif q.shape == (self.model.nq,):
             return q
         else:
             raise ValueError(
-                f"Expected q shape {(self.n_dof,)} or {(self.model.nq,)}, got {q.shape}"
+                f"Expected q shape {(self.n_dofs,)} or {(self.model.nq,)}, got {q.shape}"
             )
     
     def find_frame_id_by_name(self, name: str) -> Optional[int]:
@@ -225,17 +228,17 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
     # -------------------------------------------------------------------------
     # FK
     # -------------------------------------------------------------------------
-    def fk(self, q: np.ndarray, link_name: Optional[str] = None) -> Pose:
-        if link_name is None:
-            link_name = self.ee_link
+    def fk(self, joint_positions: np.ndarray, target_link: Optional[str] = None) -> Pose:
+        if target_link is None:
+            target_link = self.ee_link
         
         # Get the frame ID
-        if not self.model.existFrame(link_name):
-            raise ValueError(f"Link '{link_name}' not found in the model frames.")
-        frame_id = self.model.getFrameId(link_name)
+        if not self.model.existFrame(target_link):
+            raise ValueError(f"Link '{target_link}' not found in the model frames.")
+        frame_id = self.model.getFrameId(target_link)
         
         # Ensure q has the correct shape
-        q_full = self._ensure_q_shape(q)
+        q_full = self._ensure_q_shape(joint_positions)
         
         # Compute forward kinematics using framesForwardKinematics
         pin.framesForwardKinematics(self.model, self.data, q_full)

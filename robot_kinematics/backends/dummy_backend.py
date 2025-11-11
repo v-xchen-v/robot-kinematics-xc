@@ -26,7 +26,7 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
         self.default_q = np.zeros(self.n_dofs, dtype=float)
 
     # ---------------------- FK ---------------------- #
-    def fk(self, q: np.ndarray, base: str, link: str) -> Pose:
+    def fk(self, q: np.ndarray, target_link: str) -> Pose:
         """
         Simple planar FK:
             x = Σ L_i cos(Σ_j q_j)
@@ -74,7 +74,7 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
         for it in range(options.max_iters):
             iters = it + 1
 
-            pose = self.fk(q, base, link)
+            pose = self.fk(q, link)
             diff_xy = target.xyz[:2] - pose.xyz[:2]
             pos_err_val = float(np.linalg.norm(diff_xy))
 
@@ -87,7 +87,7 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
             for j in range(self.n_dofs):
                 dq = np.zeros_like(q)
                 dq[j] = eps
-                pose_pert = self.fk(q + dq, base, link)
+                pose_pert = self.fk(q + dq, link)
                 diff_pert = pose_pert.xyz[:2] - pose.xyz[:2]
                 J_xy[:, j] = diff_pert / eps
 

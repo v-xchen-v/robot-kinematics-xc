@@ -80,10 +80,10 @@ class A2D_Arm_IK:
         )
         
         self.target_frame_name = target_frame_name
-        self.init_angles = init_angles if init_angles is not None else np.zeros(self.backend.n_dof)
+        self.init_angles = init_angles if init_angles is not None else np.zeros(self.backend.n_dofs)
         
         print(f"Initialized {arm_side.upper()} arm IK solver")
-        print(f"  - DOF: {self.backend.n_dof}")
+        print(f"  - DOF: {self.backend.n_dofs}")
         print(f"  - Target frame: {target_frame_name}")
         print(f"  - Locked joints: {len(joints_to_lock)}")
     
@@ -189,7 +189,7 @@ class A2D_Arm_IK:
     def print_model_info(self):
         """Print model information."""
         print(f"=== A2D {self.arm_side.upper()} Arm IK Model Info ===")
-        print(f"DOF: {self.backend.n_dof}")
+        print(f"DOF: {self.backend.n_dofs}")
         print(f"Target frame: {self.target_frame_name}")
         print(f"Joint names: {self.backend.joint_names}")
         print("=" * 40)

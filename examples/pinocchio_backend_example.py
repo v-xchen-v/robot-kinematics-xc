@@ -53,7 +53,7 @@ def main():
     )
     
     print(f"Robot loaded successfully!")
-    print(f"Number of DOF: {backend.n_dof}")
+    print(f"Number of DOF: {backend.n_dofs}")
     print(f"Joint names: {backend.joint_names[:10]}...")  # Show first 10
     print(f"End-effector link: {backend.ee_link}")
     print()
@@ -66,7 +66,7 @@ def main():
     print("=" * 70)
     
     # Create a random joint configuration
-    q = np.random.uniform(-0.5, 0.5, backend.n_dof)
+    q = np.random.uniform(-0.5, 0.5, backend.n_dofs)
     print(f"Joint positions (first 10): {q[:10]}")
     
     # Compute FK for end-effector
