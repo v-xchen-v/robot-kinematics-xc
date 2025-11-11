@@ -14,7 +14,7 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
     - base at origin, end-effector at end of third link
     """
 
-    def __init__(self, urdf_path: str = "", base_link: str = "base_link"):
+    def __init__(self, urdf_path: str = "", base_link: str = "base_link", **kwargs):
         super().__init__()
 
         self.base_link = base_link
@@ -22,8 +22,8 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
 
         # Public contract
         self.joint_names = ["joint1", "joint2", "joint3"]
-        self.dof = len(self.joint_names)
-        self.default_q = np.zeros(self.dof, dtype=float)
+        self.n_dofs = len(self.joint_names)
+        self.default_q = np.zeros(self.n_dofs, dtype=float)
 
     # ---------------------- FK ---------------------- #
     def fk(self, q: np.ndarray, base: str, link: str) -> Pose:
@@ -35,7 +35,7 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
         Orientation is fixed identity quaternion.
         """
         q = np.asarray(q, dtype=float)
-        assert q.shape == (self.dof,)
+        assert q.shape == (self.n_dofs,)
 
         # cumulative joint angles
         cum_angles = np.cumsum(q)
@@ -83,8 +83,8 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
                 break
 
             # numeric Jacobian in XY: J_xy is (2, dof)
-            J_xy = np.zeros((2, self.dof), dtype=float)
-            for j in range(self.dof):
+            J_xy = np.zeros((2, self.n_dofs), dtype=float)
+            for j in range(self.n_dofs):
                 dq = np.zeros_like(q)
                 dq[j] = eps
                 pose_pert = self.fk(q + dq, base, link)
@@ -92,7 +92,7 @@ class DummyKinematicsBackend(BaseKinematicsBackend):
                 J_xy[:, j] = diff_pert / eps
 
             # damped least-squares
-            H = J_xy.T @ J_xy + options.regularization_weight * np.eye(self.dof)
+            H = J_xy.T @ J_xy + options.regularization_weight * np.eye(self.n_dofs)
             g = J_xy.T @ diff_xy
             dq = step_size * np.linalg.solve(H, g)
             q = q + dq

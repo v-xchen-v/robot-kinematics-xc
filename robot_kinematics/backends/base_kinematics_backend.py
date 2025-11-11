@@ -11,46 +11,46 @@ from ..core.types import IKResult
 
 JointCfg = Mapping[str, float]
 
-def build_backend(
-    backend_name: str, 
-    urdf_path: str,
-    base_link: str,
-    ee_link: str,
-    **kwargs) -> BaseKinematicsBackend:
-    """
-    Factory function to build a kinematics backend instance.
+# def build_backend(
+#     backend_name: str, 
+#     urdf_path: str,
+#     base_link: str,
+#     ee_link: str,
+#     **kwargs) -> BaseKinematicsBackend:
+#     """
+#     Factory function to build a kinematics backend instance.
 
-    Args:
-        backend_name: str
-            Name of the backend to use (e.g., 'urdfpy', 'pinocchio', 'relaxik').
-        **kwargs: Any
-            Additional keyword arguments to pass to the backend constructor.
+#     Args:
+#         backend_name: str
+#             Name of the backend to use (e.g., 'urdfpy', 'pinocchio', 'relaxik').
+#         **kwargs: Any
+#             Additional keyword arguments to pass to the backend constructor.
 
-    Returns:
-        BaseKinematicsBackend
-            An instance of the requested kinematics backend.
-    """
-    if backend_name == 'urdfpy':
-        from .urdfpy_backend import URDFPyKinematicsBackend
-        return URDFPyKinematicsBackend(
-            urdf_path=urdf_path,
-            base_link=base_link,
-            ee_link=ee_link,
-            **kwargs
-        )
-    elif backend_name == 'pinocchio':
-        from .pinocchio_backend import PinocchioKinematicsBackend
-        return PinocchioKinematicsBackend(
-            urdf_path=urdf_path,
-            base_link=base_link,
-            ee_link=ee_link,
-            **kwargs
-        )
-    # elif backend_name == 'relaxik':
-    #     from .relaxik_backend import RelaxIKKinematicsBackend
-    #     return RelaxIKKinematicsBackend(**kwargs)
-    else:
-        raise ValueError(f"Unknown kinematics backend: {backend_name}")
+#     Returns:
+#         BaseKinematicsBackend
+#             An instance of the requested kinematics backend.
+#     """
+#     if backend_name == 'urdfpy':
+#         from .urdfpy_backend import URDFPyKinematicsBackend
+#         return URDFPyKinematicsBackend(
+#             urdf_path=urdf_path,
+#             base_link=base_link,
+#             ee_link=ee_link,
+#             **kwargs
+#         )
+#     elif backend_name == 'pinocchio':
+#         from .pinocchio_backend import PinocchioKinematicsBackend
+#         return PinocchioKinematicsBackend(
+#             urdf_path=urdf_path,
+#             base_link=base_link,
+#             ee_link=ee_link,
+#             **kwargs
+#         )
+#     # elif backend_name == 'relaxik':
+#     #     from .relaxik_backend import RelaxIKKinematicsBackend
+#     #     return RelaxIKKinematicsBackend(**kwargs)
+#     else:
+#         raise ValueError(f"Unknown kinematics backend: {backend_name}")
     
 class BaseKinematicsBackend(ABC):
     """
