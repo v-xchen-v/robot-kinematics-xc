@@ -11,6 +11,7 @@ from urdfpy import URDF
 from typing import List, Tuple, Optional
 from collections import deque
 from collections import defaultdict
+from typing import Dict
 
 
 # --- Full URDF Inspector ---
@@ -213,6 +214,15 @@ class FullURDFInspector:
             print(f"Total excluded: {len(excluded_joints)} out of {len([j for j in self.robot.joints if not movable_only or j.joint_type != 'fixed'])}")
         
         return excluded_joints
+    
+    def show_robot(self, joint_cfg: Dict[str, float]):
+        """
+        Visualize the robot with given joint configuration.
+        
+        Args:
+            joint_cfg: Dictionary mapping joint names to angles (radians)
+        """
+        self.robot.show(joint_cfg)
 
 # --- Subchain Inspector ---
 class SubchainURDFInspector:
