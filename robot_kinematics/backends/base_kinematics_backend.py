@@ -1,53 +1,90 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any, List, Mapping, Union
 import numpy as np
 from abc import ABC, abstractmethod
 
 from ..frames import Pose
-    
+from ..core.types import IKOptions
+from ..urdf.inspector import SubchainURDFInspector
+from ..core.types import IKResult
+
+JointCfg = Mapping[str, float]
+
+# def build_backend(
+#     backend_name: str, 
+#     urdf_path: str,
+#     base_link: str,
+#     ee_link: str,
+#     **kwargs) -> BaseKinematicsBackend:
+#     """
+#     Factory function to build a kinematics backend instance.
+
+#     Args:
+#         backend_name: str
+#             Name of the backend to use (e.g., 'urdfpy', 'pinocchio', 'relaxik').
+#         **kwargs: Any
+#             Additional keyword arguments to pass to the backend constructor.
+
+#     Returns:
+#         BaseKinematicsBackend
+#             An instance of the requested kinematics backend.
+#     """
+#     if backend_name == 'urdfpy':
+#         from .urdfpy_backend import URDFPyKinematicsBackend
+#         return URDFPyKinematicsBackend(
+#             urdf_path=urdf_path,
+#             base_link=base_link,
+#             ee_link=ee_link,
+#             **kwargs
+#         )
+#     elif backend_name == 'pinocchio':
+#         from .pinocchio_backend import PinocchioKinematicsBackend
+#         return PinocchioKinematicsBackend(
+#             urdf_path=urdf_path,
+#             base_link=base_link,
+#             ee_link=ee_link,
+#             **kwargs
+#         )
+#     # elif backend_name == 'relaxik':
+#     #     from .relaxik_backend import RelaxIKKinematicsBackend
+#     #     return RelaxIKKinematicsBackend(**kwargs)
+#     else:
+#         raise ValueError(f"Unknown kinematics backend: {backend_name}")
     
 class BaseKinematicsBackend(ABC):
     """
-    Backend interface for FK/IK/Jacobian computations.
-    Concrete implementations should inherit from this class and implement the abstract methods with urdfpy, pinocchio, RelaxIK, etc.
+    Abstract base class for kinematics backends.
+    
+    This class provides a common interface for FK/IK/Jacobian computations
+    and shared utility methods using the URDF inspector.
+    
+    Subclasses (URDFPyKinematicsBackend, PinocchioKinematicsBackend, etc.) 
+    should:
+    1. Initialize self._urdf_inspector in their __init__
+    2. Set self.urdf_path, self.base_link, self.ee_link
+    3. Implement abstract methods (fk, ik, etc.)
+    
+    The shared methods (list_links, list_joints) will then work automatically
+    through inheritance.
     """
-    def __init__(self, name: str, metadata: Optional[Dict[str, Any]] = None):
-        self.name = name
-        self.metadata = metadata if metadata is not None else {}
-        self._urdf_inspector = None  # Lazy-initialized cache
-        
-    # --- Constuction --- #
-    @classmethod
-    @abstractmethod
-    def from_urdf(
-        cls,
-        urdf_path: str,
-        base_link: str,
-        ee_link: str,
-        joint_names: Optional[List[str]] = None,
-        **kwargs: Any
-    ) -> "BaseKinematicsBackend":
+    def __init__(self):
         """
-        Create a kinematics backend from a URDF file.
-        
-        Args:
-            urdf_path: str
-                Path to the URDF file.
-            base_link: str
-                Name of the base link.
-            end_effector_link: str
-                Name of the end-effector link.
-            joint_names: Optional[List[str]], optional
-                Subset/ordering of joints we care about. If None,
-                use all movable joints in URDF order.
-            **kwargs: Any
-                Additional backend-specific arguments.
+        Base initializer. Subclasses should call this after setting up
+        their own attributes, or initialize _urdf_inspector directly.
         """
-        ...
+        self.joint_names = []
+        self.link_names = []
+        self.n_dofs = -1
+        self.base_link = ""
+        self.ee_link = ""
         
-        
-    # --- Forward Kinematics --- #
+        # Initialize the inspector as None - subclasses should set this
+        self._urdf_inspector = None
+    
+    # ------------------------------------------------------------------
+    # Abstract methods that subclasses must implement
+    # ------------------------------------------------------------------
     @abstractmethod
     def fk(
         self,
@@ -70,21 +107,20 @@ class BaseKinematicsBackend(ABC):
         """
         ...
         
-    # --- Inverse Kinematics --- #
     @abstractmethod
     def ik(
         self,
         target_pose: Pose,
-        initial_joint_positions: Optional[np.ndarray] = None,
+        seed_q: Optional[np.ndarray] = None,
         **kwargs: Any
-    ) -> np.ndarray:
+    ) -> IKResult:
         """
         Compute the inverse kinematics to get joint positions for the desired target pose.
 
         Args:
             target_pose: Pose
                 Desired target pose for the end-effector.
-            initial_joint_positions: Optional[np.ndarray], optional
+            seed_q: Optional[np.ndarray], optional
                 Initial guess for joint positions. If None, use zeros.
             **kwargs: Any
                 Additional backend-specific arguments.
@@ -95,81 +131,6 @@ class BaseKinematicsBackend(ABC):
         """
         ...
         
-        
-    # --- Jacobian --- #
-    @abstractmethod
-    def jacobian(
-        self,
-        joint_positions: np.ndarray,
-        target_link: Optional[str] = None,
-    ) -> np.ndarray:
-        """
-        Compute the Jacobian matrix at the given joint positions.
-
-        Args:
-            joint_positions: np.ndarray, shape (n_joints,)
-                Joint positions.
-            target_link: Optional[str], optional
-                Name of the target link to compute Jacobian for.
-                If None, use the default end-effector link configured at construction.
-
-        Returns:
-            np.ndarray
-                The Jacobian matrix of shape (6, n_joints).
-        """
-        ...
-        
-    # --- Additional Methods --- #
-    def _get_urdf_inspector(self):
-        """
-        Lazy-initialize and cache the URDF inspector.
-        
-        Returns:
-            SubchainURDFInspector or None
-        """
-        if self._urdf_inspector is None:
-            if hasattr(self, 'urdf_path') and hasattr(self, 'base_link') and hasattr(self, 'ee_link'):
-                from ..urdf.inspector import SubchainURDFInspector
-                self._urdf_inspector = SubchainURDFInspector(self.urdf_path, self.base_link, self.ee_link)
-        return self._urdf_inspector
-    
-    def list_links(self) -> List[str]:
-        """
-        Get the list of frame/link names in the robot model between base_link and end_effector_link.
-        
-        Default implementation uses SubchainURDFInspector if urdf_path, base_link, and ee_link
-        attributes are available. Otherwise returns an empty list. Subclasses can override this
-        method to provide backend-specific implementations.
-
-        Returns:
-            List[str]
-                List of frame/link names.
-        """
-        inspector = self._get_urdf_inspector()
-        if inspector is not None:
-            return inspector.list_links()
-        return []
-    
-    def list_joints(self, movable_only: bool = True) -> List[str]:
-        """
-        Get the list of joint names in the robot model between base_link and end_effector_link.
-        
-        Default implementation uses SubchainURDFInspector if urdf_path, base_link, and ee_link
-        attributes are available. Otherwise returns an empty list. Subclasses can override this
-        method to provide backend-specific implementations.
-
-        Args:
-            movable_only: bool, optional
-                If True, return only movable joints. Default is True.   
-        Returns:
-            List[str]
-                List of joint names.
-        """
-        inspector = self._get_urdf_inspector()
-        if inspector is not None:
-            return inspector.get_joint_names(movable_only=movable_only)
-        return []
-    
     @abstractmethod
     def fk_all_frames(
         self,
@@ -187,3 +148,98 @@ class BaseKinematicsBackend(ABC):
                 Dictionary mapping frame/link names to their poses.
         """
         ...
+        
+    # ------------------------------------------------------------------
+    # Shared utility methods using URDF inspector
+    # These methods work automatically in subclasses if they initialize
+    # self._urdf_inspector properly
+    # ------------------------------------------------------------------
+    def _get_urdf_inspector(self) -> Optional[SubchainURDFInspector]:
+        """
+        Get the cached URDF inspector instance.
+        
+        Subclasses should initialize self._urdf_inspector in their __init__.
+        
+        Returns:
+            SubchainURDFInspector or None: The inspector if initialized, None otherwise.
+        """
+        return self._urdf_inspector
+    
+    def list_links(self) -> List[str]:
+        """
+        Get the list of frame/link names in the robot model between base_link and end_effector_link.
+        
+        This method uses the SubchainURDFInspector to traverse the URDF and find all links
+        in the kinematic chain. Subclasses can override this method to provide backend-specific
+        implementations if needed.
+
+        Returns:
+            List[str]: List of link/frame names in the kinematic chain.
+                      Returns empty list if inspector is not initialized.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.list_links()
+        return []
+    
+    def list_joints(self, movable_only: bool = True) -> List[str]:
+        """
+        Get the list of joint names in the robot model between base_link and end_effector_link.
+        
+        This method uses the SubchainURDFInspector to traverse the URDF and find all joints
+        in the kinematic chain. Subclasses can override this method to provide backend-specific
+        implementations if needed.
+
+        Args:
+            movable_only: bool, optional
+                If True, return only movable joints (revolute, prismatic, continuous).
+                If False, return all joints including fixed joints.
+                Default is True.
+                
+        Returns:
+            List[str]: List of joint names in the kinematic chain.
+                      Returns empty list if inspector is not initialized.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.get_joint_names(movable_only=movable_only)
+        return []
+
+    def list_excluded_joints(self) -> List[str]:
+        """
+        Get the list of joints that are present in the URDF but excluded
+        from the kinematic chain between base_link and end_effector_link.
+
+        This method uses the SubchainURDFInspector to identify joints
+        that are not part of the subchain. Subclasses can override this
+        method to provide backend-specific implementations if needed.
+
+        Returns:
+            List[str]: List of excluded joint names.
+                       Returns empty list if inspector is not initialized.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.list_excluded_joints(
+                base_link=self.base_link,
+                ee_link=self.ee_link,
+            )
+        return []
+    
+    def list_joint_limits(self, movable_only: bool = True) -> Dict[str, Dict[str, float]]:
+        """
+        Get the joint limits for joints in the robot model between base_link and end_effector_link.
+        
+        This method uses the SubchainURDFInspector to retrieve joint limits from the URDF.
+        Subclasses can override this method to provide backend-specific implementations if needed.
+
+        Args:
+            movable_only: bool, optional
+                If True, return limits only for movable joints (revolute, prismatic, continuous).
+                If False, return limits for all joints including fixed joints.
+                Default is True.
+        """
+        inspector = self._get_urdf_inspector()
+        if inspector is not None:
+            return inspector.list_joint_limits(movable_only=movable_only)
+        return {}

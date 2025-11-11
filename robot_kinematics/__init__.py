@@ -1,5 +1,5 @@
 """Robot kinematics package."""
 
-from .frames import Pose, PoseDelta
+from .core.types import Pose
 
-__all__ = ["Pose", "PoseDelta"]
+__all__ = ["Pose"]

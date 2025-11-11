@@ -56,6 +56,38 @@ class FullURDFInspector:
             if (not movable_only or j.joint_type != 'fixed')
         ]
 
+    def list_joint_limits(self, movable_only: bool = True, verbose: bool = False):
+        """
+        List joint limits for all joints or movable joints only.
+        
+        Args:
+            movable_only: If True, only include movable joints (non-fixed)
+            verbose: If True, print detailed information
+            
+        Returns:
+            List of tuples (joint_name, joint_type, lower_limit, upper_limit)
+        """
+        joints = self.robot.joints
+        if movable_only:
+            joints = [j for j in joints if j.joint_type != 'fixed']
+        
+        joint_limits = []
+        for j in joints:
+            lower = getattr(j.limit, 'lower', None) if j.limit else None
+            upper = getattr(j.limit, 'upper', None) if j.limit else None
+            joint_limits.append((j.name, j.joint_type, lower, upper))
+        
+        if verbose:
+            print(f"\nJoint limits for robot '{self.robot.name}':")
+            print(f"{'Joint Name':<25} {'Type':<12} {'Lower Limit':<15} {'Upper Limit':<15}")
+            print("-" * 70)
+            for name, jtype, lower, upper in joint_limits:
+                lower_str = f"{lower:.3f}" if lower is not None else "None"
+                upper_str = f"{upper:.3f}" if upper is not None else "None"
+                print(f"{name:<25} {jtype:<12} {lower_str:<15} {upper_str:<15}")
+        
+        return joint_limits
+    
     def print_tree(self):
         print(f"\nRobot link hierarchy ({self.robot.name}):")
         def recurse(link, indent=0):
@@ -125,6 +157,45 @@ class FullURDFInspector:
             j = self.robot.joint_map[jname]
             print(f"  {a} --[{jname} ({j.joint_type})]--> {b}")
 
+    def list_excluded_joints(self, base_link: str, ee_link: str, movable_only: bool = True, verbose: bool = False) -> List[str]:
+        """
+        List joints that are NOT part of the chain between base_link and ee_link.
+        
+        Args:
+            base_link: The base link name
+            ee_link: The end effector link name
+            movable_only: If True, only consider movable joints (non-fixed)
+            verbose: If True, print detailed information
+            
+        Returns:
+            List of joint names that are excluded from the chain
+        """
+        # Get joints in the chain
+        chain_joints = set()
+        try:
+            joint_chain = self.get_joint_chain(base_link, ee_link, movable_only=movable_only)
+            chain_joints = {jname for jname, _, _ in joint_chain}
+        except ValueError:
+            # If no path exists, all joints are excluded
+            pass
+        
+        # Get all joints in the robot
+        all_joints = self.robot.joints
+        if movable_only:
+            all_joints = [j for j in all_joints if j.joint_type != 'fixed']
+        
+        # Find excluded joints
+        excluded_joints = [j.name for j in all_joints if j.name not in chain_joints]
+        
+        if verbose:
+            print(f"\nExcluded joints (not in chain from '{base_link}' to '{ee_link}'):")
+            for joint_name in excluded_joints:
+                joint = self.robot.joint_map[joint_name]
+                print(f"  {joint_name:<20} type={joint.joint_type:<8} parent={joint.parent} → child={joint.child}")
+            print(f"Total excluded: {len(excluded_joints)} out of {len([j for j in self.robot.joints if not movable_only or j.joint_type != 'fixed'])}")
+        
+        return excluded_joints
+
 # --- Subchain Inspector ---
 class SubchainURDFInspector:
     """
@@ -160,6 +231,48 @@ class SubchainURDFInspector:
     def get_joint_names(self, movable_only=True):
         return [j.name for j in self.list_joints(movable_only=movable_only)]
 
+    def list_joint_limits(self, movable_only: bool = True, verbose: bool = False):
+        """
+        List joint limits for joints in the subchain.
+        
+        Args:
+            movable_only: If True, only include movable joints (non-fixed)
+            verbose: If True, print detailed information
+            
+        Returns:
+            List of tuples (joint_name, joint_type, lower_limit, upper_limit)
+        """
+        joints = self.list_joints(movable_only=movable_only)
+        joint_limits = []
+        
+        for j in joints:
+            lower = getattr(j.limit, 'lower', None) if j.limit else None
+            upper = getattr(j.limit, 'upper', None) if j.limit else None
+            joint_limits.append((j.name, j.joint_type, lower, upper))
+        
+        if verbose:
+            print(f"\nJoint limits for subchain '{self.base_link}' to '{self.end_link}':")
+            print(f"{'Joint Name':<25} {'Type':<12} {'Lower Limit':<15} {'Upper Limit':<15}")
+            print("-" * 70)
+            for name, jtype, lower, upper in joint_limits:
+                lower_str = f"{lower:.3f}" if lower is not None else "None"
+                upper_str = f"{upper:.3f}" if upper is not None else "None"
+                print(f"{name:<25} {jtype:<12} {lower_str:<15} {upper_str:<15}")
+        
+        return joint_limits
+
+    def list_excluded_joints(self, verbose: bool = False) -> List[str]:
+        """
+        List joints that are NOT part of the subchain between base_link and end_link.
+        
+        Args:
+            verbose: If True, print detailed information
+            
+        Returns:
+            List of joint names that are excluded from the subchain
+        """
+        return self.full_inspector.list_excluded_joints(self.base_link, self.end_link, verbose=verbose)
+
     def print_joint_chain(self, movable_only: bool = True):
         chain = self.full_inspector.get_joint_chain(self.base_link, self.end_link, movable_only=movable_only)
         print(f"\nJoint chain from '{self.base_link}' to '{self.end_link}':")
@@ -171,7 +284,7 @@ if __name__ == "__main__":
     urdf_path = "robots/g1/G1_120s/urdf/G1_120s.urdf"
     full_inspector = FullURDFInspector(urdf_path)
     base_link_name = full_inspector.robot.base_link.name
-    ee_name = "gripper_r_center_link"
+    ee_name = "gripper_l_center_link"
     print(full_inspector.get_joint_chain(base_link_name, ee_name, movable_only=True))
     full_inspector.print_joint_chain(base_link_name, ee_name, movable_only=True)
     # Subchain example
