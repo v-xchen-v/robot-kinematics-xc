@@ -43,7 +43,6 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         joints_to_lock: Optional[List[str]] = None,
         auto_lock_excluded_joints: bool = True,
         name: str = "pinocchio",
-        metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any
     ):
         if not PINOCCHIO_AVAILABLE:
@@ -51,6 +50,11 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
                 "Pinocchio is not installed. Please install it with: "
                 "conda install pinocchio -c conda-forge"
             )
+            
+            
+        # get active joints before auto_locking configuration
+        self.active_joint_names = kwargs.get("active_joints", [])
+
         
         # Automatically determine joints to lock if not provided
         if joints_to_lock is None and auto_lock_excluded_joints:
@@ -58,6 +62,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
             joints_to_lock = full_inspector.list_excluded_joints(
                 base_link=base_link, 
                 ee_link=ee_link, 
+                active_joints=self.active_joint_names,
                 movable_only=True
             )
             print(f"Auto-locking {len(joints_to_lock)} joints not in kinematic chain: {joints_to_lock}")
@@ -104,6 +109,15 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         self.link_names = link_names
         self.ee_frame_id = ee_frame_id
         self.n_dofs = len(joint_names)
+        self.n_active_dofs = len(self.active_joint_names)
+        
+        self.active_joint_indices = []
+        if self.active_joint_names is not None and len(self.active_joint_names) > 0:
+            name_to_index = {name: i for i, name in enumerate(self.joint_names)}
+            for name in self.active_joint_names:
+                if name not in name_to_index:
+                    raise KeyError(f"Active joint name '{name}' not found in joint names.")
+                self.active_joint_indices.append(name_to_index[name])
         
         # Initialize CasADi-based IK solver (lazy initialization)
         self._ik_solver_initialized = False
@@ -116,15 +130,15 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
     # -------------------------------------------------------------------------
     def _ensure_q_shape(self, q: np.ndarray) -> np.ndarray:
         """Ensure joint configuration has the correct shape for Pinocchio."""
-        if q.shape == (self.n_dofs,):
-            # Extend to full model configuration if needed
+        if q.shape == (self.n_active_dofs,): # all joints in chain is active
             q_full = pin.neutral(self.model)
-            # Map the provided joints to the model's joint configuration
-            # Assuming the joints are in the same order as the model's movable joints
-            q_full[:self.n_dofs] = q
+            q_full[:] = q
             return q_full
-        elif q.shape == (self.model.nq,):
-            return q
+        elif q.shape == (self.n_dofs,):
+            q_full = np.zeros(self.n_dofs)
+            q_active = pin.neutral(self.model)
+            q_full[self.active_joint_indices] = q_active
+            return q_full
         else:
             raise ValueError(
                 f"Expected q shape {(self.n_dofs,)} or {(self.model.nq,)}, got {q.shape}"
@@ -239,7 +253,11 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
     # -------------------------------------------------------------------------
     # FK
     # -------------------------------------------------------------------------
-    def fk(self, joint_positions: np.ndarray, target_link: Optional[str] = None) -> Pose:
+    def fk(
+        self, 
+        joint_positions: np.ndarray, 
+        target_link: Optional[str] = None,
+    ) -> Pose:
         if target_link is None:
             target_link = self.ee_link
         

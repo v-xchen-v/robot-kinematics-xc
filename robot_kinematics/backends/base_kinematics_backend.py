@@ -78,6 +78,8 @@ class BaseKinematicsBackend(ABC):
         self.n_dofs = -1
         self.base_link = ""
         self.ee_link = ""
+        self.active_joint_names = []
+        self.active_joint_indices = []
         
         # Initialize the inspector as None - subclasses should set this
         self._urdf_inspector = None
@@ -220,10 +222,18 @@ class BaseKinematicsBackend(ABC):
         """
         inspector = self._get_urdf_inspector()
         if inspector is not None:
-            return inspector.list_excluded_joints(
+            joint_not_in_chain = inspector.list_excluded_joints(
                 base_link=self.base_link,
                 ee_link=self.ee_link,
             )
+            
+            # should exclude joint in chain but not in active joints
+            joint_in_chain_but_no_active = [
+                j for j in inspector.get_joint_names(movable_only=True)
+                if j not in self.active_joint_names
+            ]
+            
+            return joint_not_in_chain + joint_in_chain_but_no_active
         return []
     
     def list_joint_limits(self, movable_only: bool = True) -> Dict[str, Dict[str, float]]:

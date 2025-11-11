@@ -23,6 +23,7 @@ class RobotKinematics:
         base_link: str,
         ee_link: str,
         backend: str = "pinocchio",
+        active_joints: Optional[list] = None, # If provided, only these joints are considered active
         extra: Optional[dict] = None,  # backend-specific init args
     ):
         from robot_kinematics.backends import get_kinematics_backend
@@ -31,6 +32,7 @@ class RobotKinematics:
             urdf_path=urdf_path,
             base_link=base_link,
             ee_link=ee_link,
+            active_joints=active_joints,
             **(extra or {}),
         )
         
@@ -40,14 +42,17 @@ class RobotKinematics:
         self.joint_names = list(self._backend.joint_names)
         self.n_dofs = self._backend.n_dofs
         self._name_to_index = {n: i for i, n in enumerate(self.joint_names)}
+        self.active_joint_names = self._backend.active_joint_names
+        self.n_active_dofs = len(self.active_joint_names) if self.active_joint_names else self.n_dofs
+        self.active_joint_indices = self._backend.active_joint_indices
         
     # ---------------------- helpers ---------------------- #
     def q_array_to_dict(self, q: np.ndarray) -> dict:
         """Convert joint vector → {joint_name: value}."""
         q = np.asarray(q, dtype=float)
-        if q.shape != (self.n_dofs,):
+        if q.shape != (self.n_active_dofs,):
             raise ValueError(f"Expected q shape ({self.dof},), got {q.shape}")
-        return {name: float(q[i]) for i, name in enumerate(self.joint_names)}
+        return {name: float(q[i]) for i, name in enumerate(self.active_joint_names)}
 
     def q_dict_to_array(self, q_dict: dict) -> np.ndarray:
         """Convert {joint_name: value} (subset or full) → joint vector."""
@@ -62,8 +67,8 @@ class RobotKinematics:
         """Internal: accept array or cfg dict, always return full array."""
         if isinstance(q_or_cfg, np.ndarray):
             q = np.asarray(q_or_cfg, dtype=float)
-            if q.shape != (self.n_dofs,):
-                raise ValueError(f"Expected q shape ({self.n_dofs},), got {q.shape}")
+            if q.shape != (self.n_active_dofs,):
+                raise ValueError(f"Expected q shape ({self.n_active_dofs},), got {q.shape}")
             return q
         return self.q_dict_to_array(q_or_cfg)
     

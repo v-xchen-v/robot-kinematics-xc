@@ -157,7 +157,14 @@ class FullURDFInspector:
             j = self.robot.joint_map[jname]
             print(f"  {a} --[{jname} ({j.joint_type})]--> {b}")
 
-    def list_excluded_joints(self, base_link: str, ee_link: str, movable_only: bool = True, verbose: bool = False) -> List[str]:
+    def list_excluded_joints(
+        self, 
+        base_link: str, 
+        ee_link: str, 
+        movable_only: bool = True, 
+        active_joints: Optional[List[str]] = None,
+        verbose: bool = False
+    ) -> List[str]:
         """
         List joints that are NOT part of the chain between base_link and ee_link.
         
@@ -184,8 +191,17 @@ class FullURDFInspector:
         if movable_only:
             all_joints = [j for j in all_joints if j.joint_type != 'fixed']
         
+        # list non-active joints that are in chain
+        active_chain_joints = []
+        if active_joints is not None:
+            for j in chain_joints:
+                if j in active_joints:
+                    active_chain_joints.append(j)
+                    if verbose:
+                        print(f"  {j:<20} (inactive)")
+                        
         # Find excluded joints
-        excluded_joints = [j.name for j in all_joints if j.name not in chain_joints]
+        excluded_joints = [j.name for j in all_joints if j.name not in active_chain_joints]
         
         if verbose:
             print(f"\nExcluded joints (not in chain from '{base_link}' to '{ee_link}'):")
