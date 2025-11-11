@@ -142,13 +142,16 @@ class A2D_Arm_IK:
         )
         
         # Solve IK using backend
-        solution_q, success, achieved_pose = self.backend.ik(
+        ik_result = self.backend.ik(
             target_pose=target_pose,
             initial_joint_positions=self.init_angles,
-            return_success=True,
             max_iterations=200,
             tolerance=1e-4
         )
+        
+        solution_q = ik_result.q
+        success = ik_result.success
+        achieved_pose = ik_result.info.get('achieved_pose')
         
         # Update initial angles for next iteration
         if success:
@@ -224,11 +227,14 @@ def main():
         # Test inverse kinematics
         print("\n3. Testing inverse kinematics...")
         ik_result = left_arm_ik.ik(left_matrix)
-        solution_q, success, achieved_matrix = ik_result
+        
+        solution_q = ik_result.q
+        success = ik_result.success
+        achieved_matrix = ik_result.info.get('achieved_pose')
         
         print(f"IK solved: {success}")
         print(f"Solution joint angles: {solution_q}")
-        print(f"Achieved pose matrix:\n{achieved_matrix}")
+        print(f"Achieved pose: {achieved_matrix}")
         
         # Calculate error
         position_error = np.linalg.norm(left_matrix[:3, 3] - achieved_matrix[:3, 3])

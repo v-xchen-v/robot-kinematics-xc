@@ -5,6 +5,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
 from ..urdf.inspector import SubchainURDFInspector
+from ..core.types import IKResult
 
 try:
     import pinocchio as pin
@@ -277,7 +278,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         tolerance: float = 1e-4,
         damping: float = 1e-6,
         **kwargs: Any
-    ) -> np.ndarray:
+    ) -> IKResult:
         """
         Inverse kinematics using CasADi optimization with Pinocchio.
         
@@ -298,12 +299,10 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
             **kwargs: Any
                 Additional arguments:
                 - solver_options: Dict with custom IPOPT solver options
-                - return_success: bool, if True return (q, success, achieved_pose) tuple
         
         Returns:
-            np.ndarray
-                Joint positions that achieve the desired target pose.
-                If return_success=True in kwargs, returns tuple (q, success, achieved_pose).
+            IKResult
+                Result object containing success status, joint positions, and error metrics.
         """
         # Initialize IK solver if not already done
         if not self._ik_solver_initialized:
@@ -353,22 +352,45 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         
         # Solve optimization problem
         solved = False
+        solver_info = {}
         try:
             sol = self._casadi_opti.solve_limited()
             sol_q = self._casadi_opti.value(self._casadi_var_q)
             solved = True
+            solver_info['solver_status'] = 'success'
         except Exception as e:
             # If solver fails, get the best solution found so far
-            print(f"IK solver did not converge: {e}")
+            solver_info['solver_status'] = 'failed'
+            solver_info['error_message'] = str(e)
             sol_q = self._casadi_opti.debug.value(self._casadi_var_q)
         
-        # Check if we need to return additional information
-        return_success = kwargs.get('return_success', False)
-        if return_success:
-            # Compute the actual achieved end-effector pose
-            pin.framesForwardKinematics(self.model, self.data, sol_q)
-            achieved_matrix = self.data.oMf[self.ee_frame_id].homogeneous
-            achieved_pose = T_to_pose(achieved_matrix)
-            return sol_q, solved, achieved_pose
-        else:
-            return sol_q
+        # Compute the actual achieved end-effector pose
+        pin.framesForwardKinematics(self.model, self.data, sol_q)
+        achieved_matrix = self.data.oMf[self.ee_frame_id].homogeneous
+        achieved_pose = T_to_pose(achieved_matrix)
+        
+        # Compute position error (Euclidean distance)
+        pos_err = np.linalg.norm(achieved_pose.xyz - target_pose.xyz)
+        
+        # Compute orientation error (angle difference between quaternions)
+        # Convert quaternions to rotation matrices and compute geodesic distance
+        target_rot = Rotation.from_quat([target_pose.quat_wxyz[1], target_pose.quat_wxyz[2], 
+                                          target_pose.quat_wxyz[3], target_pose.quat_wxyz[0]])
+        achieved_rot = Rotation.from_quat([achieved_pose.quat_wxyz[1], achieved_pose.quat_wxyz[2], 
+                                            achieved_pose.quat_wxyz[3], achieved_pose.quat_wxyz[0]])
+        
+        # Compute relative rotation and extract angle
+        relative_rot = target_rot.inv() * achieved_rot
+        ori_err = relative_rot.magnitude()
+        
+        # Store additional info
+        solver_info['achieved_pose'] = achieved_pose
+        solver_info['iterations'] = max_iterations  # CasADi doesn't expose actual iteration count easily
+        
+        return IKResult(
+            success=solved,
+            q=sol_q,
+            pos_err=pos_err,
+            ori_err=ori_err,
+            info=solver_info
+        )

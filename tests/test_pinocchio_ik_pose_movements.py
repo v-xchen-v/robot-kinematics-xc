@@ -146,13 +146,16 @@ def test_base_target_pose_ik(backend, base_target_pose):
     initial_q = np.zeros(backend.n_dof)
     
     # Solve IK
-    solution_q, success, achieved_pose = backend.ik(
+    ik_result = backend.ik(
         target_pose=base_target_pose,
         initial_joint_positions=initial_q,
-        return_success=True,
         max_iterations=500,
         tolerance=1e-4
     )
+    
+    solution_q = ik_result.q
+    success = ik_result.success
+    achieved_pose = ik_result.info.get('achieved_pose')
     
     # Calculate errors
     pos_error, ori_error = calculate_pose_error(base_target_pose, achieved_pose)
@@ -190,13 +193,16 @@ def test_translation_5cm(backend, base_target_pose, direction, dx, dy, dz):
     initial_q = np.zeros(backend.n_dof)
     
     # Solve IK
-    solution_q, success, achieved_pose = backend.ik(
+    ik_result = backend.ik(
         target_pose=target_pose,
         initial_joint_positions=initial_q,
-        return_success=True,
         max_iterations=500,
         tolerance=1e-4
     )
+    
+    solution_q = ik_result.q
+    success = ik_result.success
+    achieved_pose = ik_result.info.get('achieved_pose')
     
     # Calculate errors
     pos_error, ori_error = calculate_pose_error(target_pose, achieved_pose)
@@ -235,13 +241,16 @@ def test_rotation_5deg(backend, base_target_pose, axis, roll, pitch, yaw):
     initial_q = np.zeros(backend.n_dof)
     
     # Solve IK
-    solution_q, success, achieved_pose = backend.ik(
+    ik_result = backend.ik(
         target_pose=target_pose,
         initial_joint_positions=initial_q,
-        return_success=True,
         max_iterations=500,
         tolerance=1e-4
     )
+    
+    solution_q = ik_result.q
+    success = ik_result.success
+    achieved_pose = ik_result.info.get('achieved_pose')
     
     # Calculate errors
     pos_error, ori_error = calculate_pose_error(target_pose, achieved_pose)
@@ -285,13 +294,16 @@ def test_combined_movement(backend, base_target_pose):
     initial_q = np.zeros(backend.n_dof)
     
     # Solve IK
-    solution_q, success, achieved_pose = backend.ik(
+    ik_result = backend.ik(
         target_pose=target_pose,
         initial_joint_positions=initial_q,
-        return_success=True,
         max_iterations=500,
         tolerance=1e-4
     )
+    
+    solution_q = ik_result.q
+    success = ik_result.success
+    achieved_pose = ik_result.info.get('achieved_pose')
     
     # Calculate errors
     pos_error, ori_error = calculate_pose_error(target_pose, achieved_pose)
@@ -337,13 +349,16 @@ def test_accuracy_summary(backend, base_target_pose):
     
     for name, target_pose in movements:
         try:
-            solution_q, success, achieved_pose = backend.ik(
+            ik_result = backend.ik(
                 target_pose=target_pose,
                 initial_joint_positions=initial_q,
-                return_success=True,
                 max_iterations=500,
                 tolerance=1e-4
             )
+            
+            solution_q = ik_result.q
+            success = ik_result.success
+            achieved_pose = ik_result.info.get('achieved_pose')
             
             pos_error, ori_error = calculate_pose_error(target_pose, achieved_pose)
             results.append((name, success, pos_error, ori_error))

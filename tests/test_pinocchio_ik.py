@@ -52,33 +52,32 @@ class TestPinocchioIK:
         target_pose = backend.fk(initial_q)
         
         # Solve IK
-        solution = backend.ik(target_pose=target_pose)
+        ik_result = backend.ik(target_pose=target_pose)
         
         # Check that solution has correct shape
-        assert solution.shape == (backend.n_dof,) or solution.shape == (backend.model.nq,)
+        assert ik_result.q.shape == (backend.n_dof,) or ik_result.q.shape == (backend.model.nq,)
     
     def test_ik_with_return_success(self, simple_backend):
-        """Test IK with return_success option."""
+        """Test IK with IKResult return type."""
         backend = simple_backend
         
         # Get a reachable target pose
         initial_q = np.zeros(backend.n_dof)
         target_pose = backend.fk(initial_q)
         
-        # Solve IK with return_success
-        solution, success, achieved_pose = backend.ik(
-            target_pose=target_pose,
-            return_success=True
-        )
+        # Solve IK
+        ik_result = backend.ik(target_pose=target_pose)
         
         # Check return types
-        assert isinstance(solution, np.ndarray)
-        assert isinstance(success, bool)
+        assert isinstance(ik_result.q, np.ndarray)
+        assert isinstance(ik_result.success, bool)
+        assert ik_result.info is not None
+        achieved_pose = ik_result.info.get('achieved_pose')
         assert isinstance(achieved_pose, Pose)
         
         # Check that solution is valid
-        assert not np.any(np.isnan(solution))
-        assert not np.any(np.isinf(solution))
+        assert not np.any(np.isnan(ik_result.q))
+        assert not np.any(np.isinf(ik_result.q))
     
     def test_ik_accuracy(self, simple_backend):
         """Test that IK solution achieves the target pose within tolerance."""
@@ -89,14 +88,16 @@ class TestPinocchioIK:
         target_pose = backend.fk(initial_q)
         
         # Solve IK
-        solution, success, achieved_pose = backend.ik(
+        ik_result = backend.ik(
             target_pose=target_pose,
-            return_success=True,
             tolerance=1e-4
         )
         
+        # Get achieved pose from result
+        achieved_pose = ik_result.info.get('achieved_pose')
+        
         # Calculate position error
-        position_error = np.linalg.norm(target_pose.position - achieved_pose.position)
+        position_error = np.linalg.norm(target_pose.xyz - achieved_pose.xyz)
         
         # Check accuracy (allow some tolerance)
         assert position_error < 0.01, f"Position error too large: {position_error}"
@@ -111,22 +112,25 @@ class TestPinocchioIK:
         
         # Modify target pose slightly (move in z direction)
         target_pose = Pose(
-            position=initial_pose.position + np.array([0.0, 0.0, 0.05]),
-            quaternion=initial_pose.quaternion
+            xyz=initial_pose.xyz + np.array([0.0, 0.0, 0.05]),
+            quat_wxyz=initial_pose.quat_wxyz
         )
         
         # Solve IK
-        solution, success, achieved_pose = backend.ik(
+        ik_result = backend.ik(
             target_pose=target_pose,
             initial_joint_positions=initial_q,
-            return_success=True
         )
+        
+        solution = ik_result.q
+        success = ik_result.success
+        achieved_pose = ik_result.info.get('achieved_pose')
         
         # Check that solution is different from initial
         assert not np.allclose(solution[:backend.n_dof], initial_q)
         
         # Check achieved pose is close to target
-        position_error = np.linalg.norm(target_pose.position - achieved_pose.position)
+        position_error = np.linalg.norm(target_pose.xyz - achieved_pose.xyz)
         assert position_error < 0.1, f"Position error: {position_error}"
     
     def test_ik_respects_joint_limits(self, simple_backend):
@@ -138,7 +142,9 @@ class TestPinocchioIK:
         target_pose = backend.fk(initial_q)
         
         # Solve IK
-        solution = backend.ik(target_pose=target_pose)
+        ik_result = backend.ik(target_pose=target_pose)
+        
+        solution = ik_result.q
         
         # Ensure solution fits model size
         if solution.shape[0] > backend.n_dof:
@@ -166,14 +172,17 @@ class TestPinocchioIK:
         initial_guess_1 = np.zeros(backend.n_dof)
         initial_guess_2 = np.ones(backend.n_dof) * 0.1
         
-        solution_1 = backend.ik(
+        ik_result_1 = backend.ik(
             target_pose=target_pose,
             initial_joint_positions=initial_guess_1
         )
-        solution_2 = backend.ik(
+        ik_result_2 = backend.ik(
             target_pose=target_pose,
             initial_joint_positions=initial_guess_2
         )
+        
+        solution_1 = ik_result_1.q
+        solution_2 = ik_result_2.q
         
         # Both should be valid solutions
         assert not np.any(np.isnan(solution_1))
@@ -183,8 +192,8 @@ class TestPinocchioIK:
         pose_1 = backend.fk(solution_1[:backend.n_dof])
         pose_2 = backend.fk(solution_2[:backend.n_dof])
         
-        error_1 = np.linalg.norm(target_pose.position - pose_1.position)
-        error_2 = np.linalg.norm(target_pose.position - pose_2.position)
+        error_1 = np.linalg.norm(target_pose.xyz - pose_1.xyz)
+        error_2 = np.linalg.norm(target_pose.xyz - pose_2.xyz)
         
         assert error_1 < 0.01
         assert error_2 < 0.01

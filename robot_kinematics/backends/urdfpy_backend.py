@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
 from ..urdf.inspector import SubchainURDFInspector
+from ..core.types import IKResult
 
 class URDFPyKinematicsBackend(BaseKinematicsBackend):
     """
@@ -114,7 +115,7 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         target: Pose,
         initial_joint_positions: Optional[np.ndarray] = None,
         **kwargs: Any
-    ) -> np.ndarray:
+    ) -> IKResult:
         """
         Inverse kinematics is not supported by urdfpy backend.
         

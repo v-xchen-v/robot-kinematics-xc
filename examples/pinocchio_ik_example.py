@@ -88,14 +88,17 @@ def main():
     # Step 4: Solve inverse kinematics
     print("\n5. Solving inverse kinematics...")
     try:
-        # Using return_success to get convergence information
-        solution_q, success, achieved_pose = backend.ik(
+        # IK now returns IKResult with success, q, pos_err, ori_err, info
+        ik_result = backend.ik(
             target_pose=target_pose,
             initial_joint_positions=initial_q,
-            return_success=True,
             max_iterations=200,
             tolerance=1e-4
         )
+        
+        solution_q = ik_result.q
+        success = ik_result.success
+        achieved_pose = ik_result.info.get('achieved_pose')
         
         print(f"   - IK converged: {success}")
         print(f"   - Solution joint positions: {solution_q}")

@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from ..frames import Pose
 from ..core.types import IKOptions
 from ..urdf.inspector import SubchainURDFInspector
+from ..core.types import IKResult
 
 JointCfg = Mapping[str, float]
 
@@ -106,7 +107,7 @@ class BaseKinematicsBackend(ABC):
         target_pose: Pose,
         initial_joint_positions: Optional[np.ndarray] = None,
         **kwargs: Any
-    ) -> np.ndarray:
+    ) -> IKResult:
         """
         Compute the inverse kinematics to get joint positions for the desired target pose.
 

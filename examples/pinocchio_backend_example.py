@@ -146,7 +146,7 @@ def main():
     
     # Compute IK
     print("\nComputing IK...")
-    q_ik = backend.ik(
+    ik_result = backend.ik(
         target_pose=target_pose,
         initial_joint_positions=None,  # Start from neutral config
         max_iterations=1000,
@@ -154,6 +154,10 @@ def main():
         damping=1e-6,
     )
     
+    q_ik = ik_result.q
+    print(f"IK success: {ik_result.success}")
+    print(f"Position error: {ik_result.pos_err:.6f} m")
+    print(f"Orientation error: {ik_result.ori_err:.6f} rad")
     print(f"IK solution (first 10): {q_ik[:10]}")
     
     # Verify the solution with FK
