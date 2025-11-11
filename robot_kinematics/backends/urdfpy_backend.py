@@ -126,3 +126,21 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
             "URDFPy backend does not support inverse kinematics (IK). "
             "Please use a different backend (e.g., Pinocchio or RelaxIK) for IK capabilities."
         )
+
+
+    # Helper method
+    def q_array_to_dict(self, q: np.ndarray) -> Dict[str, float]:
+        """
+        When we get IK result q array, can use this helper user-friendly method to
+        Check the joint values with names.
+        
+        Convert joint angle array to dictionary mapping joint names to values.
+        
+        Args:
+            q: Joint angle array of shape (n_dof,)
+            
+        Returns:
+            Dictionary {joint_name: joint_value}
+        """
+        assert q.shape == (self.n_dof,), f"Expected q shape {(self.n_dof,)}, got {q.shape}"
+        return {name: float(val) for name, val in zip(self.joint_names, q)}

@@ -73,6 +73,10 @@ class BaseKinematicsBackend(ABC):
         Base initializer. Subclasses should call this after setting up
         their own attributes, or initialize _urdf_inspector directly.
         """
+        self.joint_names = []
+        self.link_names = []
+        self.n_dofs = -1
+        
         # Initialize the inspector as None - subclasses should set this
         self._urdf_inspector = None
     
