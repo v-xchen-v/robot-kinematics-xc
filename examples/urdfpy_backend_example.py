@@ -19,7 +19,7 @@ def main():
     ee_link = "gripper_r_center_link"  # Example end-effector
     
     # Option A: Let the backend automatically discover joints
-    backend = URDFPyKinematicsBackend.from_urdf(
+    backend = URDFPyKinematicsBackend(
         urdf_path=urdf_path,
         base_link=base_link,
         ee_link=ee_link,
@@ -65,7 +65,7 @@ def main():
     # Example 5: Create backend with explicit joint names
     # (useful when you want to control joint order or use a subset)
     specific_joints = joints[:3] if len(joints) >= 3 else joints
-    backend2 = URDFPyKinematicsBackend.from_urdf(
+    backend2 = URDFPyKinematicsBackend(
         urdf_path=urdf_path,
         base_link=base_link,
         ee_link=ee_link,

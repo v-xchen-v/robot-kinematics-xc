@@ -17,35 +17,6 @@ class BaseKinematicsBackend(ABC):
         self.metadata = metadata if metadata is not None else {}
         self._urdf_inspector = None  # Lazy-initialized cache
         
-    # --- Constuction --- #
-    @classmethod
-    @abstractmethod
-    def from_urdf(
-        cls,
-        urdf_path: str,
-        base_link: str,
-        ee_link: str,
-        joint_names: Optional[List[str]] = None,
-        **kwargs: Any
-    ) -> "BaseKinematicsBackend":
-        """
-        Create a kinematics backend from a URDF file.
-        
-        Args:
-            urdf_path: str
-                Path to the URDF file.
-            base_link: str
-                Name of the base link.
-            end_effector_link: str
-                Name of the end-effector link.
-            joint_names: Optional[List[str]], optional
-                Subset/ordering of joints we care about. If None,
-                use all movable joints in URDF order.
-            **kwargs: Any
-                Additional backend-specific arguments.
-        """
-        ...
-        
         
     # --- Forward Kinematics --- #
     @abstractmethod

@@ -19,65 +19,44 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
     """
     def __init__(
         self,
-        robot: URDF,
-        base_link: str,
-        ee_link: str,
-        joint_names: List[str],
-        name: str = "urdfpy",
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        super().__init__(name=name, metadata=metadata)
-        self.robot = robot
-        self.base_link = base_link
-        self.ee_link = ee_link
-        self.joint_names = joint_names
-        self.n_dof = len(joint_names)
-        
-    # -------------------------------------------------------------------------
-    # Construction
-    # -------------------------------------------------------------------------
-    @classmethod
-    def from_urdf(
-        cls,
         urdf_path: str,
         base_link: str,
         ee_link: str,
         joint_names: Optional[List[str]] = None,
+        name: str = "urdfpy",
+        metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any
-    ) -> "URDFPyKinematicsBackend":
-        robot = URDF.load(urdf_path)
-
-        # Create a temporary instance to use base class methods
-        temp_instance = cls.__new__(cls)
-        temp_instance.urdf_path = urdf_path
-        temp_instance.base_link = base_link
-        temp_instance.ee_link = ee_link
-        temp_instance._urdf_inspector = None
-        
-        # Get joint_names and link_names from the base class methods
-        if joint_names is None:
-            joint_names = temp_instance.list_joints(movable_only=True)
-        link_names = temp_instance.list_links()
-            
-        metadata = {
+    ):
+        # Initialize metadata early
+        if metadata is None:
+            metadata = {}
+        metadata.update({
             "urdf_path": urdf_path,
             "base_link": base_link,
             "ee_link": ee_link,
-        }
+        })
         metadata.update(kwargs)
-
-        instance = cls(
-            robot=robot,
-            base_link=base_link,
-            ee_link=ee_link,
-            joint_names=joint_names,
-            metadata=metadata,
-        )
-        # Store urdf_path so base class methods can use it
-        instance.urdf_path = urdf_path
-        instance.joint_names = joint_names
-        instance.link_names = link_names
-        return instance
+        
+        super().__init__(name=name, metadata=metadata)
+        
+        # Load robot from URDF
+        robot = URDF.load(urdf_path)
+        
+        # Store attributes needed for base class methods
+        self.urdf_path = urdf_path
+        self.base_link = base_link
+        self.ee_link = ee_link
+        
+        # Get joint_names and link_names from the base class methods
+        if joint_names is None:
+            joint_names = self.list_joints(movable_only=True)
+        link_names = self.list_links()
+        
+        # Set instance attributes
+        self.robot = robot
+        self.joint_names = joint_names
+        self.link_names = link_names
+        self.n_dof = len(joint_names)
         
     # -------------------------------------------------------------------------
     # Helpers for URDFPy

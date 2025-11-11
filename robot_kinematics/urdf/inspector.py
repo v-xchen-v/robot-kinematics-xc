@@ -171,7 +171,7 @@ if __name__ == "__main__":
     urdf_path = "robots/g1/G1_120s/urdf/G1_120s.urdf"
     full_inspector = FullURDFInspector(urdf_path)
     base_link_name = full_inspector.robot.base_link.name
-    ee_name = "gripper_r_center_link"
+    ee_name = "gripper_l_center_link"
     print(full_inspector.get_joint_chain(base_link_name, ee_name, movable_only=True))
     full_inspector.print_joint_chain(base_link_name, ee_name, movable_only=True)
     # Subchain example
