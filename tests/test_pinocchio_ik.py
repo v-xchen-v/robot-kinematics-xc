@@ -7,7 +7,7 @@ These tests verify the inverse kinematics functionality.
 import numpy as np
 import pytest
 from robot_kinematics.backends.pinocchio_backend import PinocchioKinematicsBackend
-from robot_kinematics.frames.transforms import Pose
+from robot_kinematics.core.types import Pose
 
 
 # Check if required dependencies are available

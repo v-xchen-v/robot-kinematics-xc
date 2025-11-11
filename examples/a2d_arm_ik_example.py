@@ -11,7 +11,7 @@ modular robot_kinematics framework.
 import numpy as np
 from scipy.spatial.transform import Rotation
 from robot_kinematics.backends.pinocchio_backend import PinocchioKinematicsBackend
-from robot_kinematics.frames.transforms import Pose
+from robot_kinematics.core.types import Pose
 
 
 def matrix_to_quat_pose(matrix):

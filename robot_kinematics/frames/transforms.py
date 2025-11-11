@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from ..core.types import Pose
 
 def T_to_pose(T: np.ndarray) -> Pose:
     """Convert a 4x4 transformation matrix to a Pose object."""
@@ -23,79 +24,3 @@ def pose_to_T(pose: Pose) -> np.ndarray:
     T[:3, :3] = T_R
     T[:3, 3] = pose.xyz
     return T
-
-@dataclass
-class Pose:
-    """Represents a 3D pose with position and orientation.
-    
-    Attributes:
-        position: 3D position vector [x, y, z]
-        orientation: Quaternion [w, x, y, z] in scalar-first format
-    """
-    xyz: np.ndarray     # shape: (3,)
-    quat_wxyz: np.ndarray  # shape: (4,) quaternion (w, x, y, z) scalar-first
-    
-    def as_matrix(self) -> np.ndarray:
-        """Convert pose to a 4x4 transformation matrix."""
-        w, x, y, z = self.quat_wxyz
-        T_R = R.from_quat([x, y, z, w], scalar_first=False).as_matrix()
-        T = np.eye(4)
-        T[:3, :3] = T_R
-        T[:3, 3] = self.xyz
-        return T
-    
-    def as_flat_array(self) -> np.ndarray:
-        """Convert pose to a flat array [x, y, z, qw, qx, qy, qz]."""
-        return np.concatenate((self.xyz, self.quat_wxyz))
-
-
-@dataclass
-class PoseDelta:
-    """Represents a displacement/difference between two 3D poses.
-    
-    Attributes:
-        position_delta: 3D position displacement [dx, dy, dz]
-        orientation_delta: Quaternion displacement [dqw, dqx, dqy, dqz]
-    """
-    position_delta: np.ndarray      # shape: (3,) - position displacement
-    orientation_delta: np.ndarray   # shape: (4,) - quaternion displacement
-    
-    def as_flat_array(self) -> np.ndarray:
-        """Convert to flat array [dx, dy, dz, dqw, dqx, dqy, dqz]."""
-        return np.concatenate((self.position_delta, self.orientation_delta))
-    
-    @classmethod
-    def from_poses(cls, pose1: Pose, pose2: Pose) -> "PoseDelta":
-        """Compute pose delta from two poses (pose2 - pose1).
-        
-        Args:
-            pose1: Starting pose
-            pose2: Target pose
-            
-        Returns:
-            PoseDelta representing the displacement
-        """
-        position_delta = pose2.xyz - pose1.xyz
-        orientation_delta = pose2.quat_wxyz - pose1.quat_wxyz
-        
-        return cls(
-            position_delta=position_delta,
-            orientation_delta=orientation_delta
-        )
-    
-    def apply_to_pose(self, pose: Pose) -> Pose:
-        """Apply this delta to a pose to get a new pose.
-        
-        Args:
-            pose: Base pose to apply delta to
-            
-        Returns:
-            New pose with delta applied
-        """
-        new_position = pose.xyz + self.position_delta
-        new_orientation = pose.quat_wxyz + self.orientation_delta
-        
-        # Normalize the quaternion to ensure it's valid
-        new_orientation = new_orientation / np.linalg.norm(new_orientation)
-        
-        return Pose(xyz=new_position, quat_wxyz=new_orientation)
