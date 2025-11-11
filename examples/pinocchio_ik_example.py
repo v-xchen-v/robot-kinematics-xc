@@ -31,14 +31,14 @@ def main():
         
         # 锁定头部关节(ignore since it's not in Chain)
         
-        # 锁定左臂所有关节
-        "idx21_arm_l_joint1",
-        "idx22_arm_l_joint2",
-        "idx23_arm_l_joint3",
-        "idx24_arm_l_joint4",
-        "idx25_arm_l_joint5",
-        "idx26_arm_l_joint6",
-        "idx27_arm_l_joint7",
+        # 锁定左臂所有关节(ignore since it's not in Chain)
+        # "idx21_arm_l_joint1",
+        # "idx22_arm_l_joint2",
+        # "idx23_arm_l_joint3",
+        # "idx24_arm_l_joint4",
+        # "idx25_arm_l_joint5",
+        # "idx26_arm_l_joint6",
+        # "idx27_arm_l_joint7",
         # 锁定夹爪关节
         
         # 锁定所有夹爪关节（左右手) (ignore since is not in chain)
