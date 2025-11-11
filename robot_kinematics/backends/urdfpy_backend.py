@@ -65,6 +65,8 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         self.joint_names = joint_names
         self.link_names = link_names
         self.n_dofs = len(joint_names)
+        self.active_joint_names = kwargs.get("active_joint_names", joint_names)
+        self.active_joint_indices = [self.joint_names.index(name) for name in self.active_joint_names]
         
     # -------------------------------------------------------------------------
     # Helpers for URDFPy

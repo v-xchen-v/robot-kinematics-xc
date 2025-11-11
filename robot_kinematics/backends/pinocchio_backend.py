@@ -1,6 +1,6 @@
 from .base_kinematics_backend import BaseKinematicsBackend
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 import numpy as np
 from scipy.spatial.transform import Rotation
 from ..frames.transforms import T_to_pose, pose_to_T, Pose
@@ -54,8 +54,8 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
             
         # get active joints before auto_locking configuration
         self.active_joint_names = kwargs.get("active_joints", [])
+        self.inactive_joints_seed = kwargs.get("inactive_joints_seed", {})
 
-        
         # Automatically determine joints to lock if not provided
         if joints_to_lock is None and auto_lock_excluded_joints:
             full_inspector = FullURDFInspector(urdf_path)
@@ -66,19 +66,25 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
                 movable_only=True
             )
             print(f"Auto-locking {len(joints_to_lock)} joints not in kinematic chain: {joints_to_lock}")
+        self.joints_to_lock = joints_to_lock
+        
         
         # Load the URDF model using RobotWrapper
         if package_dirs is not None:
-            robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
+            self.robot_wrapper = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
         else:
             # automatically find the package dir as the file directory
             package_dirs = [os.path.dirname(urdf_path)]
-            robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
-        
+            self.robot_wrapper = pin.RobotWrapper.BuildFromURDF(urdf_path, package_dirs=package_dirs)
+        self.urdf_all_joint_names = [self.robot_wrapper.model.names[i] for i in range(1, self.robot_wrapper.model.nq + 1)]
+
         # Build reduced robot if joints_to_lock is provided
         if joints_to_lock is not None and len(joints_to_lock) > 0:
-            reference_config = np.zeros(robot.model.nq)
-            robot = robot.buildReducedRobot(
+            reference_config = np.zeros(self.robot_wrapper.model.nq) # [n_all_joints_in_urdf, 1]
+            for joint_name, joint_value in self.inactive_joints_seed.items():
+                joint_idx_in_all = self.urdf_all_joint_names.index(joint_name)
+                reference_config[joint_idx_in_all] = joint_value
+            robot = self.robot_wrapper.buildReducedRobot(
                 list_of_joints_to_lock=joints_to_lock,
                 reference_configuration=reference_config,
             )
@@ -135,7 +141,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
             q_full[:] = q
             return q_full
         elif q.shape == (self.n_dofs,):
-            q_full = np.zeros(self.n_dofs)
+            q_full = q
             q_active = pin.neutral(self.model)
             q_full[self.active_joint_indices] = q_active
             return q_full
@@ -160,6 +166,13 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
             if frame.name == name:
                 return frame_id
         return None
+    
+    def _update_ref_joints(self, q_ref: Dict[str, float]):
+        """
+        q_ref: Dict[str, float]
+        all chain joint value as initial guess
+        """
+        raise NotImplementedError("Use urdfpy backend to update ref joints.")
     
     def _initialize_ik_solver(self, solver_options: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -258,45 +271,47 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
         joint_positions: np.ndarray, 
         target_link: Optional[str] = None,
     ) -> Pose:
-        if target_link is None:
-            target_link = self.ee_link
+        # if target_link is None:
+        #     target_link = self.ee_link
         
-        # Get the frame ID
-        if not self.model.existFrame(target_link):
-            raise ValueError(f"Link '{target_link}' not found in the model frames.")
-        frame_id = self.model.getFrameId(target_link)
+        # # Get the frame ID
+        # if not self.model.existFrame(target_link):
+        #     raise ValueError(f"Link '{target_link}' not found in the model frames.")
+        # frame_id = self.model.getFrameId(target_link)
         
-        # Ensure q has the correct shape
-        q_full = self._ensure_q_shape(joint_positions)
+        # # Ensure q has the correct shape
+        # q_full = self._ensure_q_shape(joint_positions)
         
-        # Compute forward kinematics using framesForwardKinematics
-        pin.framesForwardKinematics(self.model, self.data, q_full)
+        # # Compute forward kinematics using framesForwardKinematics
+        # pin.framesForwardKinematics(self.model, self.data, q_full)
         
-        # Get the frame placement (SE3 transform)
-        T = self.data.oMf[frame_id]
+        # # Get the frame placement (SE3 transform)
+        # T = self.data.oMf[frame_id]
         
-        # Convert to 4x4 homogeneous transformation matrix
-        T_matrix = T.homogeneous
+        # # Convert to 4x4 homogeneous transformation matrix
+        # T_matrix = T.homogeneous
         
-        return T_to_pose(T_matrix)
+        # return T_to_pose(T_matrix)
+        raise NotImplementedError("Use urdfpy fk method instead.")
     
     def fk_all_frames(self, q: np.ndarray) -> Dict[str, Pose]:
-        # Ensure q has the correct shape
-        q_full = self._ensure_q_shape(q)
+        # # Ensure q has the correct shape
+        # q_full = self._ensure_q_shape(q)
         
-        # Compute forward kinematics using framesForwardKinematics
-        pin.framesForwardKinematics(self.model, self.data, q_full)
+        # # Compute forward kinematics using framesForwardKinematics
+        # pin.framesForwardKinematics(self.model, self.data, q_full)
         
-        frames: Dict[str, Pose] = {}
+        # frames: Dict[str, Pose] = {}
         
-        # Iterate over all frames
-        for i in range(self.model.nframes):
-            frame_name = self.model.frames[i].name
-            T = self.data.oMf[i]
-            T_matrix = T.homogeneous
-            frames[frame_name] = T_to_pose(T_matrix)
+        # # Iterate over all frames
+        # for i in range(self.model.nframes):
+        #     frame_name = self.model.frames[i].name
+        #     T = self.data.oMf[i]
+        #     T_matrix = T.homogeneous
+        #     frames[frame_name] = T_to_pose(T_matrix)
         
-        return frames
+        # return frames
+        raise NotImplementedError("Use urdfpy fk_all_frames method instead.")
 
         
     # -------------------------------------------------------------------------
@@ -305,7 +320,7 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
     def ik(
         self,
         target_pose: Pose,
-        initial_joint_positions: Optional[np.ndarray] = None,
+        seed_q: Optional[np.ndarray] = None,
         max_iterations: int = 1000,
         tolerance: float = 1e-4,
         damping: float = 1e-6,
@@ -369,17 +384,30 @@ class PinocchioKinematicsBackend(BaseKinematicsBackend):
                 }
             self._initialize_ik_solver(solver_options)
         
-        # Set initial joint positions
-        if initial_joint_positions is None:
-            initial_joint_positions = pin.neutral(self.model)
-        else:
-            initial_joint_positions = self._ensure_q_shape(initial_joint_positions)
+        # # Set initial joint positions
+        if seed_q is None:
+            seed_q = pin.neutral(self.model)
+        # else:
+        #     initial_joint_positions = self._ensure_q_shape(initial_joint_positions)
+        
+        # def q_chain_arr_to_dict(q_arr: np.ndarray) -> Dict[str, float]:
+        #     q_dict = {}
+        #     for i, name in enumerate(self.joint_names):
+        #         q_dict[name] = q_arr[i]
+        #     return q_dict
+        
+        # self._update_ref_joints(
+        #     q_ref=q_chain_arr_to_dict(seed_q)
+        # )
+        
+        # if self.active_joint_names is not None and len(self.active_joint_names) > 0:
+        #     self.init_guess = seed_q[self.active_joint_indices]
         
         # Convert target pose to 4x4 transformation matrix
         target_matrix = pose_to_T(target_pose)
         
         # Set optimization parameters
-        self._casadi_opti.set_initial(self._casadi_var_q, initial_joint_positions)
+        self._casadi_opti.set_initial(self._casadi_var_q, seed_q)
         self._casadi_opti.set_value(self._casadi_param_tf, target_matrix)
         
         # Solve optimization problem
