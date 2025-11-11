@@ -144,7 +144,7 @@ class A2D_Arm_IK:
         # Solve IK using backend
         ik_result = self.backend.ik(
             target_pose=target_pose,
-            initial_joint_positions=self.init_angles,
+            seed_q=self.init_angles,
             max_iterations=200,
             tolerance=1e-4
         )

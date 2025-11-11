@@ -94,7 +94,7 @@ def main():
         # IK now returns IKResult with success, q, pos_err, ori_err, info
         ik_result = backend.ik(
             target_pose=target_pose,
-            initial_joint_positions=initial_q,
+            seed_q=initial_q,
             max_iterations=200,
             tolerance=1e-4
         )

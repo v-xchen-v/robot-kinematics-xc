@@ -148,7 +148,7 @@ def main():
     print("\nComputing IK...")
     ik_result = backend.ik(
         target_pose=target_pose,
-        initial_joint_positions=None,  # Start from neutral config
+        seed_q=None,  # Start from neutral config
         max_iterations=1000,
         tolerance=1e-4,
         damping=1e-6,
