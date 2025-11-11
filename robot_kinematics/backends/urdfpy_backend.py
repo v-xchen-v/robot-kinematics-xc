@@ -38,6 +38,18 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         self.base_link = base_link
         self.ee_link = ee_link
         
+        
+        # robot = RobotKinematics(
+        #     urdf_path="assets/urdf/ur5.urdf",
+        #     base_link="base_link",
+        #     ee_link="tool0",
+        #     backend_name="urdfpy",
+        #     extra={"with_visuals": True},   # forwarded to URDFPyBackend(...)
+        # )
+        # if there is extra in kwargs, and inside the dict there is "with_visuals", we can pass it to urdfpy
+        self.with_visuals = kwargs.get("with_visuals", False)
+
+        
         self.name = name
         
         # Initialize URDF inspector for shared methods
@@ -81,6 +93,11 @@ class URDFPyKinematicsBackend(BaseKinematicsBackend):
         if T_target is None:
             raise ValueError(f"Link {target_link} not found in FK result.")
 
+        
+        if self.with_visuals:
+            # Visualize the robot in the given configuration
+            self.robot.show(cfg=q_dict)
+        
         return T_to_pose(T_target)
     
     def fk_all_frames(self, joint_positions: np.ndarray) -> Dict[str, Pose]:
