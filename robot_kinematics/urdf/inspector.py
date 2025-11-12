@@ -223,6 +223,15 @@ class FullURDFInspector:
             joint_cfg: Dictionary mapping joint names to angles (radians)
         """
         self.robot.show(joint_cfg)
+        
+    def animate_robot(self, cfg_trajectory: List[Dict[str, List[float]]]):
+        """
+        Animate the robot through a trajectory of joint configurations.
+        
+        Args:
+            cfg_trajectory: List of joint configuration dictionaries
+        """
+        self.robot.animate(cfg_trajectory)
 
 # --- Subchain Inspector ---
 class SubchainURDFInspector:

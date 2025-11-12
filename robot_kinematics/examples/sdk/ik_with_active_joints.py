@@ -24,6 +24,10 @@ def main():
         ee_link="gripper_r_center_link",
         backend="pinocchio",
         active_joints=active_joints,
+        inactive_joints_seed={
+            "idx01_body_joint1": 0.0,
+            "idx02_body_joint2": 0.0,
+        }
     )
 
     print("Active joints:")
